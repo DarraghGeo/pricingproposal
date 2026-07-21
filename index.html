@@ -569,12 +569,24 @@
     color: rgba(255,255,255,.55);
     margin-top: 2px;
   }
+  .demo-grand-total-right{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
   .demo-grand-total-sum{
     font-family: var(--font-mono);
     font-weight: 700;
     font-size: 24px;
   }
+  .demo-grand-total-breakdown{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255,255,255,.5);
+  }
   .demo-grand-total-metafee{
+    grid-column: 3;
     font-family: var(--font-mono);
     font-weight: 500;
     font-size: 13px;
@@ -588,6 +600,45 @@
     text-underline-offset: 3px;
   }
   #demo2GrandTotalMetaFee:hover{ color: rgba(255,255,255,.85); }
+
+  .demo-grand-total-receipt{
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    column-gap: 14px;
+    row-gap: 5px;
+    padding: 18px 24px;
+  }
+  .demo-receipt-line{ display: contents; }
+  .demo-receipt-line > span:first-child{
+    grid-column: 1;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    color: rgba(255,255,255,.75);
+  }
+  .demo-receipt-line > span:nth-child(2){
+    grid-column: 2;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    color: rgba(255,255,255,.9);
+    text-align: right;
+  }
+  .demo-receipt-divider{
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(255,255,255,.22);
+    margin: 6px 0;
+  }
+  .demo-receipt-total > span:first-child,
+  .demo-receipt-total > span:nth-child(2){
+    font-size: 21px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .demo-grand-total-receipt .demo-grand-total-note{
+    grid-column: 1 / -1;
+    margin-top: 10px;
+    text-align: left;
+  }
 
   /* ---- bottom-up Meta Fees drawer (slide9) ---- */
   .demo2-backdrop{
@@ -788,6 +839,18 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     align-items: start;
+  }
+  .final-stage .tiers-wrap{
+    height: auto;
+    position: static;
+  }
+  .final-stage .tiers-row{
+    position: static;
+    height: auto;
+  }
+  .final-stage{
+    overflow-y: auto;
+    height: 100%;
   }
 
   .tier-card{
@@ -1351,8 +1414,7 @@
       <div class="seg" data-seg="6" onclick="jumpToStep(6)"></div>
       <div class="seg" data-seg="7" onclick="jumpToStep(7)"></div>
       <div class="seg" data-seg="8" onclick="jumpToStep(8)"></div>
-      <div class="seg" data-seg="9" onclick="jumpToStep(9)"></div>
-      <span class="label" id="stepLabel">01 / 10</span>
+      <span class="label" id="stepLabel">01 / 09</span>
     </div>
   </div>
 
@@ -2170,106 +2232,6 @@ tierLegendHover.addEventListener('mouseleave', ()=>{
       </div>
     </div>
 
-    <!-- SLIDE 8: PRICING DEMO -->
-    <div class="slide" id="slide8">
-      <div class="demo-wrap">
-
-        <div class="demo-section" id="demoTierSection">
-          <div class="demo-section-title">
-            <span class="demo-num">1</span> Feature Tier
-            <span class="demo-section-total" id="demoTierPriceOut">Select a tier</span>
-          </div>
-          <div class="tiers-row demo-tiers-row" id="demoTiersRow">
-            <div class="tier-card starter selectable demo-card" data-tier="starter" onclick="demoSelectTier('starter')">
-              <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
-              <div class="tname"><span class="swatch"></span>Starter</div>
-              <div class="price"><div class="bundled-line">$399<span class="per">/mo</span></div></div>
-              <div class="feat-list">
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">1,000</span> AI Tokens</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">0</span> dashboards</div>
-              </div>
-            </div>
-            <div class="tier-card pro selectable demo-card" data-tier="pro" onclick="demoSelectTier('pro')">
-              <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
-              <div class="tname"><span class="swatch"></span>Pro</div>
-              <div class="price"><div class="bundled-line">$549<span class="per">/mo</span></div></div>
-              <div class="feat-list">
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">3,000</span> AI Tokens</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">5</span> dashboards</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Extra Feature 1</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Extra Feature 2</div>
-              </div>
-            </div>
-            <div class="tier-card advanced selectable demo-card" data-tier="advanced" onclick="demoSelectTier('advanced')">
-              <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
-              <div class="tname"><span class="swatch"></span>Advanced</div>
-              <div class="price"><div class="bundled-line">$999<span class="per">/mo</span></div></div>
-              <div class="feat-list">
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">7,000</span> AI Tokens</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">15</span> dashboards</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Extra Feature 1</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Extra Feature 2</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Extra Feature 3</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Extra Feature 4</div>
-              </div>
-            </div>
-            <div class="tier-card enterprise demo-card selectable" data-tier="enterprise" onclick="demoSelectTier('enterprise')">
-              <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
-              <div class="tname"><span class="swatch"></span>Enterprise</div>
-              <div class="price"><div class="bundled-line">from $5,000<span class="per">/mo</span></div></div>
-              <div class="feat-list">
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Dedicated SLA</div>
-                <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Custom AI</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="demo-section" id="demoMetaSection">
-          <div class="demo-section-title">
-            <span class="demo-num">2</span> Conversation Pricing
-          </div>
-          <div id="demoMetaRows"></div>
-          <button class="demo-add-row" onclick="demoAddRow()">+ Add country</button>
-
-          <div class="demo-price-summary">
-            <div class="demo-price-chip">
-              <span class="demo-price-chip-label">Meta</span>
-              <span class="demo-price-chip-val">$<span id="demoMetaTotalOut">0.00</span></span>
-            </div>
-            <div class="demo-price-chip">
-              <span class="demo-price-chip-label">Treble</span>
-              <span class="demo-price-chip-val">$<span id="demoTrebleTotalOut">0.00</span></span>
-            </div>
-            <div class="demo-price-chip total">
-              <span class="demo-price-chip-label">Subtotal</span>
-              <span class="demo-price-chip-val" id="demoConvSubtotalOut">$0.00</span>
-            </div>
-          </div>
-
-          <button class="demo-bucket-toggle" id="demoBucketToggle" onclick="demoToggleBucketDrawer()">&#9656; How Treble pricing scales</button>
-          <div class="demo-bucket-drawer" id="demoBucketDrawer">
-            <div class="slider-block demo-bucket-block">
-              <div class="live-value"><span id="demoBucketValueOut">10,000</span><span class="unit">/mo</span></div>
-              <input type="range" id="demoBucketSlider" min="0" max="13" step="1" value="0" oninput="demoOnBucketChange()">
-              <div class="ticks" id="demoBucketTicks"></div>
-            </div>
-            <div class="demo-bucket-note">&#8776; $<span id="demoBucketPriceOut">0.00</span>/mo at this bucket on the discrete curve — illustrative only, doesn't factor into the total above.</div>
-          </div>
-        </div>
-
-        <div class="demo-grand-total">
-          <div class="demo-grand-total-text">
-            <div class="demo-grand-total-label">Total</div>
-            <div class="demo-grand-total-note">Includes Onboarding and a Dedicated CSM</div>
-          </div>
-          <div class="demo-grand-total-sum">
-            <span id="demoGrandTotalOut">$0.00</span><span class="demo-grand-total-metafee" id="demoGrandTotalMetaFee"></span>
-          </div>
-        </div>
-
-      </div>
-    </div>
 
     <!-- SLIDE 9: TREBLE-ONLY CALCULATOR WITH META FEE DRAWER -->
     <div class="slide" id="slide9">
@@ -2337,14 +2299,22 @@ tierLegendHover.addEventListener('mouseleave', ()=>{
           </div>
         </div>
 
-        <div class="demo-grand-total">
-          <div class="demo-grand-total-text">
-            <div class="demo-grand-total-label">Total</div>
-            <div class="demo-grand-total-note">Includes Onboarding and a Dedicated CSM</div>
+        <div class="demo-grand-total demo-grand-total-receipt">
+          <div class="demo-receipt-line">
+            <span>Feature Tier</span>
+            <span id="demo2LineTier">$0.00</span>
           </div>
-          <div class="demo-grand-total-sum">
-            <span id="demo2GrandTotalOut">$0.00</span><span class="demo-grand-total-metafee" id="demo2GrandTotalMetaFee" onclick="demo2ToggleDrawer()"></span>
+          <div class="demo-receipt-line">
+            <span>Conversation Bucket</span>
+            <span id="demo2LineBucket">$0.00</span>
           </div>
+          <div class="demo-receipt-divider"></div>
+          <div class="demo-receipt-line demo-receipt-total">
+            <span>Total</span>
+            <span id="demo2GrandTotalOut">$0.00</span>
+            <span class="demo-grand-total-metafee" id="demo2GrandTotalMetaFee" onclick="demo2ToggleDrawer()"></span>
+          </div>
+          <div class="demo-grand-total-note">Includes Onboarding and a Dedicated CSM</div>
         </div>
 
       </div>
@@ -2381,8 +2351,8 @@ tierLegendHover.addEventListener('mouseleave', ()=>{
 <div id="overlay"></div>
 
 <script>
-let step = 0; // 0 bundled, 1 unbundled, 2 tier modeler, 3 final recap, 4 deals chart, 5 features vs usage, 6 final recap (dup), 7 benefits, 8 demo, 9 demo2
-const TOTAL_STEPS = 10;
+let step = 0; // 0 bundled, 1 unbundled, 2 tier modeler, 3 final recap, 4 deals chart, 5 features vs usage, 6 final recap (dup), 7 benefits, 8 demo2
+const TOTAL_STEPS = 9;
 
 const gridReveals = ['show-titles','show-dots','show-labels','show-diagonal','show-banner'];
 let gridSubStep = 0;
@@ -2423,7 +2393,7 @@ function updateChrome(){
   });
   document.getElementById('stepLabel').textContent = '0'+(step+1)+' / 0'+TOTAL_STEPS;
   document.getElementById('prevBtn').disabled = step===0;
-  const atEnd = step===9;
+  const atEnd = step===8;
   document.getElementById('nextBtn').disabled = atEnd;
   document.getElementById('nextBtn').innerHTML = atEnd
     ? 'Done <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>'
@@ -2436,25 +2406,27 @@ function updateChrome(){
   document.getElementById('slide4').classList.toggle('active', step===5);
   document.getElementById('slide7').classList.toggle('active', step===6);
   document.getElementById('slide5').classList.toggle('active', step===7);
-  document.getElementById('slide8').classList.toggle('active', step===8);
-  document.getElementById('slide9').classList.toggle('active', step===9);
+  document.getElementById('slide9').classList.toggle('active', step===8);
   if(step===3){
-    finalTierCount = state.tiers;
+    finalTierCount = Math.max(state.tiers, 4);
     document.getElementById('finalTiersSlider').value = finalTierCount;
     document.getElementById('finalTiersVal').textContent = finalTierCount;
     finalBuildSlider();
     finalSyncSelection();
   }
   if(step===6){
-    finalTierCount2 = state.tiers;
+    finalTierCount2 = Math.max(state.tiers, 4);
     document.getElementById('finalTiersSlider2').value = finalTierCount2;
     document.getElementById('finalTiersVal2').textContent = finalTierCount2;
     finalBuildSlider2();
     finalSyncSelection();
   }
-  if(step===9){
+  if(step===8){
     demo2CloseDrawer();
     demo2Init();
+    document.querySelector('.brand .faint').textContent = '/ Pricing Presentation Demo';
+  } else {
+    document.querySelector('.brand .faint').textContent = '/ Revenue proposal';
   }
 }
 
@@ -2486,10 +2458,8 @@ function goNext(){
     }
     step=8; updateChrome(); return;
   }
-  if(step===8){ step=9; updateChrome(); return; }
 }
 function goPrev(){
-  if(step===9){ step=8; updateChrome(); return; }
   if(step===8){ step=7; updateChrome(); return; }
   if(step===7){
     if(benefitsSubStep > 0){
@@ -2936,14 +2906,7 @@ function fmtMoney(n){
 }
 const DEMO_RATES = {"Argentina": {"Marketing": 0.0618, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Brazil": {"Marketing": 0.0625, "Utility": 0.0068, "Authentication": 0.0068, "Authentication-International": null, "Service": null}, "Chile": {"Marketing": 0.0889, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Colombia": {"Marketing": 0.0125, "Utility": 0.0008, "Authentication": 0.0008, "Authentication-International": null, "Service": null}, "Egypt": {"Marketing": 0.0644, "Utility": 0.0036, "Authentication": 0.0036, "Authentication-International": 0.065, "Service": null}, "France": {"Marketing": 0.0859, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Germany": {"Marketing": 0.1365, "Utility": 0.055, "Authentication": 0.055, "Authentication-International": null, "Service": null}, "Hong Kong": {"Marketing": 0.0732, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Hungary": {"Marketing": 0.086, "Utility": 0.035, "Authentication": 0.035, "Authentication-International": null, "Service": null}, "India": {"Marketing": 0.0118, "Utility": 0.0014, "Authentication": 0.0014, "Authentication-International": 0.0304, "Service": null}, "Indonesia": {"Marketing": 0.0411, "Utility": 0.025, "Authentication": 0.025, "Authentication-International": 0.136, "Service": null}, "Israel": {"Marketing": 0.0353, "Utility": 0.0053, "Authentication": 0.0053, "Authentication-International": null, "Service": null}, "Italy": {"Marketing": 0.0795, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Malaysia": {"Marketing": 0.086, "Utility": 0.014, "Authentication": 0.014, "Authentication-International": 0.0418, "Service": null}, "Mexico": {"Marketing": 0.0305, "Utility": 0.0085, "Authentication": 0.0085, "Authentication-International": null, "Service": null}, "Netherlands": {"Marketing": 0.1597, "Utility": 0.05, "Authentication": 0.05, "Authentication-International": null, "Service": null}, "Nigeria": {"Marketing": 0.0516, "Utility": 0.0067, "Authentication": 0.0067, "Authentication-International": 0.075, "Service": null}, "Pakistan": {"Marketing": 0.0473, "Utility": 0.01, "Authentication": 0.01, "Authentication-International": 0.075, "Service": null}, "Peru": {"Marketing": 0.0703, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Poland": {"Marketing": 0.0366, "Utility": 0.0122, "Authentication": 0.0122, "Authentication-International": null, "Service": null}, "Qatar": {"Marketing": 0.0341, "Utility": 0.012, "Authentication": 0.012, "Authentication-International": null, "Service": null}, "Romania": {"Marketing": 0.086, "Utility": 0.029, "Authentication": 0.029, "Authentication-International": null, "Service": null}, "Russia": {"Marketing": 0.0802, "Utility": 0.04, "Authentication": 0.04, "Authentication-International": null, "Service": null}, "Saudi Arabia": {"Marketing": 0.0501, "Utility": 0.0107, "Authentication": 0.0107, "Authentication-International": 0.0598, "Service": null}, "Singapore": {"Marketing": 0.0732, "Utility": 0.016, "Authentication": 0.016, "Authentication-International": null, "Service": null}, "South Africa": {"Marketing": 0.0379, "Utility": 0.0076, "Authentication": 0.0076, "Authentication-International": 0.02, "Service": null}, "Spain": {"Marketing": 0.0707, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Turkey": {"Marketing": 0.0109, "Utility": 0.0009, "Authentication": 0.0009, "Authentication-International": null, "Service": null}, "United Arab Emirates": {"Marketing": 0.0499, "Utility": 0.0157, "Authentication": 0.0157, "Authentication-International": 0.051, "Service": null}, "United Kingdom": {"Marketing": 0.0635, "Utility": 0.022, "Authentication": 0.022, "Authentication-International": null, "Service": null}, "North America": {"Marketing": 0.025, "Utility": 0.0034, "Authentication": 0.0034, "Authentication-International": null, "Service": null}, "Rest of Africa": {"Marketing": 0.0225, "Utility": 0.004, "Authentication": 0.004, "Authentication-International": null, "Service": null}, "Rest of Asia Pacific": {"Marketing": 0.0732, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Central & Eastern Europe": {"Marketing": 0.086, "Utility": 0.0212, "Authentication": 0.0212, "Authentication-International": null, "Service": null}, "Rest of Latin America": {"Marketing": 0.074, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Middle East": {"Marketing": 0.0341, "Utility": 0.0091, "Authentication": 0.0091, "Authentication-International": null, "Service": null}, "Rest of Western Europe": {"Marketing": 0.0592, "Utility": 0.0171, "Authentication": 0.0171, "Authentication-International": null, "Service": null}, "Other": {"Marketing": 0.0604, "Utility": 0.0077, "Authentication": 0.0077, "Authentication-International": null, "Service": null}};
 const DEMO_COUNTRIES = Object.keys(DEMO_RATES);
-let demoRowCounter = 0;
-let demoSelectedTier = null;
-let demoBucketManuallySet = false;
 let demoBucketValues = [];
-
-function markSectionSet(id){
-  document.getElementById(id).classList.add('is-set');
-}
 
 function demoCountryOptions(selected){
   return DEMO_COUNTRIES.map(c=>`<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('');
@@ -2964,80 +2927,6 @@ function demoRateFor(country, category){
   if(!entry) return 0;
   const v = entry[category];
   return v==null ? 0 : v;
-}
-
-function demoRowTemplate(rowId, country){
-  return `
-    <div class="demo-meta-row" data-row-id="${rowId}">
-      <select class="demo-country-select" onchange="demoOnCountryChange(this)">${demoCountryOptions(country)}</select>
-      <select class="demo-category-select" onchange="demoOnMetaChange()">${demoCategoryOptions(country, 'Marketing')}</select>
-      <div class="demo-row-slider-wrap">
-        <input type="range" class="demo-conv-slider" min="0" max="100000" step="100" value="0" oninput="demoOnMetaChange()">
-        <span class="demo-row-value">0 convs</span>
-      </div>
-      <span class="demo-row-price">$0.00</span>
-      <button class="demo-row-remove" onclick="demoRemoveRow(this)">&times;</button>
-    </div>`;
-}
-
-function demoAddRow(){
-  demoRowCounter++;
-  const country = DEMO_COUNTRIES[(demoRowCounter-1) % DEMO_COUNTRIES.length];
-  document.getElementById('demoMetaRows').insertAdjacentHTML('beforeend', demoRowTemplate(demoRowCounter, country));
-  demoOnMetaChange();
-}
-
-function demoRemoveRow(btn){
-  btn.closest('.demo-meta-row').remove();
-  demoOnMetaChange();
-}
-
-function demoOnCountryChange(selectEl){
-  const row = selectEl.closest('.demo-meta-row');
-  const catSelect = row.querySelector('.demo-category-select');
-  const currentCat = catSelect.value;
-  catSelect.innerHTML = demoCategoryOptions(selectEl.value, currentCat);
-  demoOnMetaChange();
-}
-
-function demoOnMetaChange(){
-  let total = 0;
-  let metaCost = 0;
-  document.querySelectorAll('#demoMetaRows .demo-meta-row').forEach(row=>{
-    const country = row.querySelector('.demo-country-select').value;
-    const category = row.querySelector('.demo-category-select').value;
-    const slider = row.querySelector('.demo-conv-slider');
-    const val = parseInt(slider.value,10);
-    const rate = demoRateFor(country, category);
-    const rowCost = val * rate;
-    row.querySelector('.demo-row-value').textContent = fmtInt(val)+' convs';
-    row.querySelector('.demo-row-price').textContent = '$'+fmtMoney(rowCost);
-    total += val;
-    metaCost += rowCost;
-  });
-  document.getElementById('demoMetaTotalOut').textContent = fmtMoney(metaCost);
-  const steppedCeiling = demoNearestBucketValue(total);
-  document.getElementById('demoTrebleTotalOut').textContent = fmtMoney(demoTrebleCost(steppedCeiling));
-  markSectionSet('demoMetaSection');
-  if(!demoBucketManuallySet){
-    demoSetBucketFromTotal(total);
-  }
-  demoUpdateGrandTotal();
-}
-
-function demoSelectTier(id){
-  demoSelectedTier = id;
-  document.querySelectorAll('#demoTiersRow .tier-card.selectable').forEach(c=>{
-    c.classList.toggle('selected', c.dataset.tier===id);
-  });
-  const priceEl = document.getElementById('demoTierPriceOut');
-  if(id==='enterprise'){
-    priceEl.textContent = 'Custom';
-  } else {
-    priceEl.textContent = '$'+platformFees[id]+'/mo';
-  }
-  markSectionSet('demoTierSection');
-  demoUpdateGrandTotal();
 }
 
 function demoBuildBucketValues(){
@@ -3070,96 +2959,6 @@ function demoTrebleCost(convs){
     (Math.sqrt(DEMO_TREBLE_TOP_CEILING) - Math.sqrt(DEMO_TREBLE_FREE_CONVOS));
   if(raw <= 0) return 0;
   return Math.round(raw/100)*100 - 1;
-}
-
-// Treble pricing moves in the same distinct steps as the bucket ladder —
-// Meta stays gradual (exact conversation count), Treble snaps to the
-// nearest bucket ceiling.
-function demoNearestBucketValue(total){
-  if(!demoBucketValues.length) demoBuildBucketValues();
-  let bestIdx = 0, bestDiff = Infinity;
-  demoBucketValues.forEach((v,i)=>{
-    const diff = Math.abs(v-total);
-    if(diff < bestDiff){ bestDiff = diff; bestIdx = i; }
-  });
-  return demoBucketValues[bestIdx];
-}
-
-function demoSetBucketFromTotal(total){
-  if(!demoBucketValues.length) demoBuildBucketValues();
-  let bestIdx = 0, bestDiff = Infinity;
-  demoBucketValues.forEach((v,i)=>{
-    const diff = Math.abs(v-total);
-    if(diff < bestDiff){ bestDiff = diff; bestIdx = i; }
-  });
-  document.getElementById('demoBucketSlider').value = bestIdx;
-  demoRenderBucketTicks();
-  demoSyncBucketDisplay();
-}
-
-function demoRenderBucketTicks(){
-  const len = demoBucketValues.length;
-  const ticksEl = document.getElementById('demoBucketTicks');
-  let html = '';
-  demoBucketValues.forEach((c,i)=>{
-    const pct = len>1 ? (i/(len-1))*100 : 0;
-    const style = (pct>=99.9) ? `left:100%; transform: translateX(-100%);` : `left:${pct}%`;
-    const price = demoTrebleCost(c);
-    html += `<div class="tick" style="${style}"><div class="dash"></div><div class="tlabel">${fmtK(c)}</div><div class="tick-price">$${fmtMoney(price)}</div></div>`;
-  });
-  ticksEl.innerHTML = html;
-}
-
-// The bucket drawer is illustrative only — it mirrors the same $2,999-at-100k
-// curve at whichever discrete bucket ceiling is selected, but does not feed
-// into demoUpdateGrandTotal().
-function demoSyncBucketDisplay(){
-  const idx = parseInt(document.getElementById('demoBucketSlider').value,10);
-  const len = demoBucketValues.length;
-  const pct = len>1 ? (idx/(len-1))*100 : 0;
-  const ceiling = demoBucketValues[idx];
-  document.getElementById('demoBucketValueOut').textContent = fmtInt(ceiling);
-  document.getElementById('demoBucketSlider').style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)`;
-  document.getElementById('demoBucketPriceOut').textContent = fmtMoney(demoTrebleCost(ceiling));
-}
-
-function demoOnBucketChange(){
-  demoBucketManuallySet = true;
-  demoSyncBucketDisplay();
-}
-
-function demoToggleBucketDrawer(){
-  const drawer = document.getElementById('demoBucketDrawer');
-  const btn = document.getElementById('demoBucketToggle');
-  const open = drawer.classList.toggle('open');
-  btn.innerHTML = (open ? '&#9662; ' : '&#9656; ') + 'How Treble pricing scales';
-}
-
-function demoUpdateGrandTotal(){
-  const metaCost = parseFloat(document.getElementById('demoMetaTotalOut').textContent.replace(/,/g,'')) || 0;
-  const trebleCost = parseFloat(document.getElementById('demoTrebleTotalOut').textContent.replace(/,/g,'')) || 0;
-  const subtotal = metaCost + trebleCost;
-  document.getElementById('demoConvSubtotalOut').textContent = '$'+fmtMoney(subtotal);
-
-  const out = document.getElementById('demoGrandTotalOut');
-  const metaFeeOut = document.getElementById('demoGrandTotalMetaFee');
-  metaFeeOut.textContent = '(+$'+fmtMoney(metaCost)+' Meta Fee)';
-  if(demoSelectedTier === 'enterprise'){
-    out.textContent = 'Custom';
-    return;
-  }
-  const tierFee = demoSelectedTier ? platformFees[demoSelectedTier] : 0;
-  const total = trebleCost + tierFee;
-  out.textContent = '$'+fmtMoney(total);
-}
-
-function demoInit(){
-  if(!demoBucketValues.length){
-    demoBuildBucketValues();
-    demoRenderBucketTicks();
-    demoSyncBucketDisplay();
-  }
-  demoUpdateGrandTotal();
 }
 
 // ==================================================================
@@ -3292,14 +3091,19 @@ function demo2UpdateGrandTotal(){
 
   const out = document.getElementById('demo2GrandTotalOut');
   const metaFeeOut = document.getElementById('demo2GrandTotalMetaFee');
+  const lineTier = document.getElementById('demo2LineTier');
+  const lineBucket = document.getElementById('demo2LineBucket');
   metaFeeOut.textContent = '(+$'+fmtMoney(metaFee)+' Meta Fee)';
+  lineBucket.textContent = '$'+fmtMoney(trebleFee);
 
   if(demo2SelectedTier === 'enterprise'){
+    lineTier.textContent = 'Custom';
     out.textContent = 'Custom';
     return;
   }
   const tierFee = demo2SelectedTier ? platformFees[demo2SelectedTier] : 0;
   const total = tierFee + trebleFee;
+  lineTier.textContent = '$'+fmtMoney(tierFee);
   out.textContent = '$'+fmtMoney(total);
 }
 
@@ -3316,7 +3120,6 @@ selectTier('starter');
 syncSliderVisual();
 updateTotals();
 updateChrome();
-demoInit();
 </script>
 
 </body>
