@@ -819,7 +819,7 @@ function syncBucket(){
   const cost = botCost(selected);
   document.getElementById('bucketPriceOut').textContent = '$' + fmtMoney(cost) + '/mo';
   document.getElementById('lineBucketConvos').textContent =
-    '(' + fmtInt(selected) + ' convos w/ ' + fmtInt(BOT_FREE_INCLUDED) + ' free)';
+    '(' + fmtInt(selected) + ' convos incl. ' + fmtInt(BOT_FREE_INCLUDED) + ' free)';
 
   enforceAiMinimum(); // AI's minimum depends on the current Bot volume
   updateGrandTotal();
@@ -845,7 +845,7 @@ function syncAiBucket(){
   const freeAi = currentAiIncluded(); // continuous -- the real number used in the charge math above
   document.getElementById('aiBucketPriceOut').textContent = '$' + fmtMoney(cost) + '/mo';
   document.getElementById('lineAiBucketConvos').textContent =
-    '(' + fmtInt(selected) + ' convos w/ ' + fmtInt(freeAi) + ' free)';
+    '(' + fmtInt(selected) + ' convos incl. ' + fmtInt(freeAi) + ' free)';
 
   updateGrandTotal();
 }
