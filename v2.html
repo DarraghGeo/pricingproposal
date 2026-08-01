@@ -492,6 +492,105 @@
   }
   .add-row:hover{ background: var(--accent-soft); }
 
+
+  /* ==========================================================================
+     SECTION 4 -- DISCOUNT & MARGIN TOOL
+     ========================================================================== */
+  .discount-section{ display: flex; flex-direction: column; gap: 16px; }
+
+  .discount-disabled-note{
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: -8px;
+    display: none;
+  }
+  .discount-disabled-note.show{ display: block; }
+  .reset-link{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+  }
+  .reset-link:hover{ color: var(--ink); }
+
+  .table-wrap{ overflow-x: auto; }
+  .discount-table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .discount-table th{
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+    padding: 8px 10px;
+    border-bottom: 1.5px solid var(--border);
+    white-space: nowrap;
+  }
+  .discount-table td{
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .discount-table th.num, .discount-table td.num{ text-align: right; font-family: var(--font-mono); }
+  .discount-table td strong{ color: var(--ink); }
+  .discount-table td.strong{ color: var(--ink); font-weight: 700; }
+  .discount-table .input-col{ min-width: 76px; }
+  .discount-table input[type="number"]{
+    width: 68px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 6px;
+    color: var(--ink);
+  }
+  .discount-table input[type="number"]:disabled{ background: var(--bg); color: var(--ink-faint); }
+  .discount-table .muted-cell{ color: var(--ink-faint); }
+  .discount-table tfoot td{
+    border-bottom: none;
+    border-top: 1.5px solid var(--border);
+    font-weight: 700;
+    color: var(--ink);
+    padding-top: 12px;
+  }
+  .gm-pill{ font-weight: 700; }
+  .gm-pill.high{ color: var(--teal); }
+  .gm-pill.low{ color: #B4302F; }
+  .gm-pill.neutral{ color: var(--ink-faint); font-weight: 400; }
+
+  .approval-card{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+  }
+  .approval-label{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+  }
+  .approval-value{ font-size: 16px; color: var(--ink); }
+
+  .approval-card.ok .approval-value{ color: var(--teal); }
+  .approval-card.warn{ background: #FCEFE3; border-color: #EFC29A; }
+  .approval-card.warn .approval-value{ color: #B4600B; }
+
 </style>
 </head>
 <body>
@@ -619,6 +718,92 @@
       </span>
     </div>
     <div class="total-note">Includes Onboarding and a Dedicated CSM</div>
+  </div>
+
+  <!-- ============================================================
+       DISCOUNT & MARGIN TOOL -- reuses the Feature Tier / Bot / AI
+       selections from sections 1-3 above (same selectedTier,
+       BUCKETS[bucketIdx], AI_STEPS[aiBucketIdx]). Adapted from the
+       standalone Discount Calculator reference tool: COGS assumptions
+       (platform ~25.75% of list, Regular $0.0018/convo, AI $0.0628/convo,
+       Stripe ~4.5%) are inferred from that tool's sample output, not
+       pulled from its source -- flagged in chat, worth Finance sign-off.
+       ============================================================ -->
+  <div class="section discount-section">
+    <div class="bucket-head">
+      <div class="section-title" style="margin-bottom:0;"><span class="section-num">4</span> Discounts</div>
+      <button class="reset-link" type="button" onclick="resetDiscounts()">Reset</button>
+    </div>
+    <div class="discount-disabled-note" id="discountDisabledNote">Select some additional Agent &amp; Bot or AI conversations to enable discounts.</div>
+
+    <div class="approval-card" id="approvalCard">
+      <span class="approval-label" id="approvalLabel">Needs Approval By</span>
+      <strong class="approval-value" id="approvalValue">—</strong>
+    </div>
+
+    <div class="table-wrap">
+      <table class="discount-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Purchased</th>
+            <th class="num">List revenue</th>
+            <th class="input-col">Discount %</th>
+            <th class="input-col">Discount $</th>
+            <th class="num">Final revenue</th>
+            <th class="num">Gross margin</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Platform fee</strong></td>
+            <td id="dtPlatformPurchased">—</td>
+            <td class="num" id="dtPlatformList">$0.00</td>
+            <td><span class="muted-cell">Not Eligible</span></td>
+            <td><span class="muted-cell">Not Eligible</span></td>
+            <td class="num strong" id="dtPlatformFinal">$0.00</td>
+            <td class="num" id="dtPlatformGm">-</td>
+          </tr>
+          <tr>
+            <td><strong>Agent &amp; Bot Convo.</strong></td>
+            <td id="dtRegularPurchased">—</td>
+            <td class="num" id="dtRegularList">$0.00</td>
+            <td><input type="number" id="dtRegularPct" min="0" max="30" step="1" value="0" oninput="onDiscountPctChange('regular')"></td>
+            <td><input type="number" id="dtRegularAmt" min="0" step="5" value="0" oninput="onDiscountAmtChange('regular')"></td>
+            <td class="num strong" id="dtRegularFinal">$0.00</td>
+            <td class="num" id="dtRegularGm">-</td>
+          </tr>
+          <tr>
+            <td><strong>AI Convo.</strong></td>
+            <td id="dtAiPurchased">—</td>
+            <td class="num" id="dtAiList">$0.00</td>
+            <td><input type="number" id="dtAiPct" min="0" max="30" step="1" value="0" oninput="onDiscountPctChange('ai')"></td>
+            <td><input type="number" id="dtAiAmt" min="0" step="5" value="0" oninput="onDiscountAmtChange('ai')"></td>
+            <td class="num strong" id="dtAiFinal">$0.00</td>
+            <td class="num" id="dtAiGm">-</td>
+          </tr>
+          <tr>
+            <td><strong>Stripe on Meta pass-through</strong></td>
+            <td id="dtStripePurchased">Not provided</td>
+            <td class="num">$0.00</td>
+            <td><span class="muted-cell">-</span></td>
+            <td><span class="muted-cell">-</span></td>
+            <td class="num strong">$0.00</td>
+            <td class="num">-</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">Total</td>
+            <td class="num" id="dtTotalList">$0.00</td>
+            <td class="num" id="dtTotalPct">0.0%</td>
+            <td class="num" id="dtTotalAmt">$0.00</td>
+            <td class="num" id="dtTotalFinal">$0.00</td>
+            <td class="num" id="dtTotalGm">-</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -857,12 +1042,202 @@ function updateGrandTotal(){
   if(selectedTier === 'enterprise'){
     document.getElementById('lineTier').textContent = 'Custom';
     document.getElementById('grandTotalOut').textContent = 'Custom';
+    updateDiscountTool();
     return;
   }
 
   const tierFee = selectedTier ? platformFees[selectedTier] : 0;
   document.getElementById('lineTier').textContent = '$' + fmtMoney(tierFee);
   document.getElementById('grandTotalOut').textContent = '$' + fmtMoney(tierFee + bucketCost + aiBucketCost);
+  updateDiscountTool();
+}
+
+
+/* ============================================================================
+   DISCOUNT & MARGIN TOOL
+   Adapted from a standalone reference calculator. Reuses the existing
+   selectedTier / BUCKETS[bucketIdx] / AI_STEPS[aiBucketIdx] state from
+   sections 1-3 above rather than duplicating tier/slider UI.
+
+   COGS assumptions below are INFERRED from the reference tool's sample
+   output (it's a compiled app, not raw source, so these aren't guaranteed
+   exact) -- worth a Finance sign-off before this drives real proposals:
+     - Platform fee COGS  ~= 25.75% of list platform revenue, PLUS the cost
+                            to serve the tier's included Regular/AI
+                            conversations (see below) -- this row's margin
+                            is deliberately "all-inclusive" of the bundle.
+     - Regular convo COGS = additional (purchased) Regular conversations
+                            x $0.0018/convo -- only the paid portion; the
+                            included portion's cost lives in Platform fee.
+     - AI convo COGS      = additional (purchased) AI conversations
+                            x $0.0628/convo (same AI_UNIT_COST already used
+                            for AI pricing) -- same paid-only logic as Regular.
+     - Stripe COGS        ~= 4.5% of the amount it's applied to
+   ============================================================================ */
+const DISCOUNT_CAP_PCT = 30;
+const PLATFORM_COGS_RATE = 0.2575;
+const REGULAR_COGS_RATE = 0.0018;
+const AI_COGS_RATE = AI_UNIT_COST; // 0.0628 -- reuses the AI pricing constant above
+const STRIPE_RATE = 0.045;
+
+let discountState = {
+  platform: { pct: 0, amt: 0 },
+  regular:  { pct: 0, amt: 0 },
+  ai:       { pct: 0, amt: 0 }
+};
+
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function onDiscountPctChange(row){
+  const input = document.getElementById('dt' + capitalize(row) + 'Pct');
+  const list = discountRowList(row);
+  const pct = clamp(parseFloat(input.value) || 0, 0, DISCOUNT_CAP_PCT);
+  discountState[row].pct = pct;
+  discountState[row].amt = roundToNearest5(list * pct / 100);
+  updateDiscountTool();
+}
+
+function onDiscountAmtChange(row){
+  const input = document.getElementById('dt' + capitalize(row) + 'Amt');
+  const list = discountRowList(row);
+  const maxAmt = list * DISCOUNT_CAP_PCT / 100;
+  const amt = clamp(parseFloat(input.value) || 0, 0, maxAmt);
+  discountState[row].amt = amt;
+  discountState[row].pct = list > 0 ? (amt / list * 100) : 0;
+  updateDiscountTool();
+}
+
+function resetDiscounts(){
+  discountState = { platform: {pct:0,amt:0}, regular: {pct:0,amt:0}, ai: {pct:0,amt:0} };
+  updateDiscountTool();
+}
+
+function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/** List revenue for a given discount-table row, using the live tier/slider state from sections 1-3. */
+function discountRowList(row){
+  if(row === 'platform') return selectedTier === 'enterprise' ? 0 : (selectedTier ? platformFees[selectedTier] : 0);
+  if(row === 'regular') return botCost(BUCKETS[bucketIdx]);
+  if(row === 'ai') return aiCost(AI_STEPS[aiBucketIdx]);
+  return 0;
+}
+
+function fmtGm(netGp, denom){
+  if(denom <= 0) return '-';
+  return (netGp / denom * 100).toFixed(1) + '%';
+}
+
+/** Recompute and render the whole Discount & Margin Tool from current tier/slider/discount state. */
+function updateDiscountTool(){
+  const isEnterprise = selectedTier === 'enterprise';
+  const includedRegular = currentBotIncluded();
+  const includedAi = currentAiIncluded();
+  const additionalRegular = BUCKETS[bucketIdx];
+  const additionalAi = AI_STEPS[aiBucketIdx];
+  const metaCost = parseFloat(document.getElementById('metaFeeOut').textContent.replace(/[^0-9.]/g, '')) || 0;
+
+  // Discounts unlock as soon as EITHER slider has some additional volume --
+  // only disabled when BOTH are still at 0.
+  const toolDisabled = additionalRegular <= 0 && additionalAi <= 0;
+  document.getElementById('discountDisabledNote').classList.toggle('show', toolDisabled && !isEnterprise);
+
+  // ---- Platform fee row ----
+  const platformList = discountRowList('platform');
+  // Platform fee is never discountable.
+  discountState.platform.pct = 0;
+  discountState.platform.amt = 0;
+  const platformFinal = platformList;
+  const platformCogs = isEnterprise ? 0 : (platformList * PLATFORM_COGS_RATE) + (includedRegular * REGULAR_COGS_RATE) + (includedAi * AI_COGS_RATE); // all-inclusive: platform's own cost + cost to serve the included Regular/AI conversations
+  const platformNetGp = platformFinal - platformCogs;
+
+  document.getElementById('dtPlatformPurchased').textContent = selectedTier ? capitalize(selectedTier) : '—';
+  document.getElementById('dtPlatformList').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(platformList);
+  document.getElementById('dtPlatformFinal').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(platformFinal);
+  document.getElementById('dtPlatformGm').textContent = isEnterprise ? '-' : fmtGm(platformNetGp, platformFinal);
+
+  // ---- Regular conversations row ----
+  const regularList = discountRowList('regular');
+  discountState.regular.amt = clamp(discountState.regular.amt, 0, regularList * DISCOUNT_CAP_PCT / 100);
+  const regularFinal = regularList - discountState.regular.amt;
+  const regularCogs = additionalRegular * REGULAR_COGS_RATE; // only the purchased/additional portion -- included cost now lives in the Platform fee row
+  const regularNetGp = regularFinal - regularCogs;
+
+  document.getElementById('dtRegularPurchased').textContent = fmtInt(additionalRegular) + ' purchased';
+  document.getElementById('dtRegularList').textContent = '$' + fmtMoney(regularList);
+  document.getElementById('dtRegularPct').value = discountState.regular.pct.toFixed(0);
+  document.getElementById('dtRegularAmt').value = discountState.regular.amt.toFixed(0);
+  document.getElementById('dtRegularPct').disabled = toolDisabled || regularList <= 0;
+  document.getElementById('dtRegularAmt').disabled = toolDisabled || regularList <= 0;
+  document.getElementById('dtRegularPct').max = regularList > 0 ? DISCOUNT_CAP_PCT : 0;
+  document.getElementById('dtRegularAmt').max = regularList * DISCOUNT_CAP_PCT / 100;
+  document.getElementById('dtRegularFinal').textContent = '$' + fmtMoney(regularFinal);
+  document.getElementById('dtRegularGm').textContent = fmtGm(regularNetGp, regularFinal);
+
+  // ---- AI conversations row ----
+  const aiList = discountRowList('ai');
+  discountState.ai.amt = clamp(discountState.ai.amt, 0, aiList * DISCOUNT_CAP_PCT / 100);
+  const aiFinal = aiList - discountState.ai.amt;
+  const aiCogs = additionalAi * AI_COGS_RATE; // only the purchased/additional portion -- included cost now lives in the Platform fee row
+  const aiNetGp = aiFinal - aiCogs;
+
+  document.getElementById('dtAiPurchased').textContent = fmtInt(additionalAi) + ' purchased';
+  document.getElementById('dtAiList').textContent = '$' + fmtMoney(aiList);
+  document.getElementById('dtAiPct').value = discountState.ai.pct.toFixed(0);
+  document.getElementById('dtAiAmt').value = discountState.ai.amt.toFixed(0);
+  document.getElementById('dtAiPct').disabled = toolDisabled || aiList <= 0;
+  document.getElementById('dtAiAmt').disabled = toolDisabled || aiList <= 0;
+  document.getElementById('dtAiPct').max = aiList > 0 ? DISCOUNT_CAP_PCT : 0;
+  document.getElementById('dtAiAmt').max = aiList * DISCOUNT_CAP_PCT / 100;
+  document.getElementById('dtAiFinal').textContent = '$' + fmtMoney(aiFinal);
+  document.getElementById('dtAiGm').textContent = fmtGm(aiNetGp, aiFinal);
+
+  // ---- Stripe on Meta pass-through row ----
+  const stripeCogs = metaCost * STRIPE_RATE; // not shown, used only to derive GM
+  const stripeNetGp = -stripeCogs;
+  document.getElementById('dtStripePurchased').textContent = metaCost > 0 ? 'Provided' : 'Not provided';
+
+  // ---- Totals ----
+  const totalList = (isEnterprise ? 0 : platformList) + regularList + aiList;
+  const totalAmt = (isEnterprise ? 0 : discountState.platform.amt) + discountState.regular.amt + discountState.ai.amt;
+  const totalFinal = (isEnterprise ? 0 : platformFinal) + regularFinal + aiFinal;
+  const totalNetGp = (isEnterprise ? 0 : platformNetGp) + regularNetGp + aiNetGp + stripeNetGp;
+
+  document.getElementById('dtTotalList').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(totalList);
+  document.getElementById('dtTotalPct').textContent = totalList > 0 ? (totalAmt/totalList*100).toFixed(1) + '%' : '0.0%';
+  document.getElementById('dtTotalAmt').textContent = '$' + fmtMoney(totalAmt);
+  document.getElementById('dtTotalFinal').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(totalFinal);
+  document.getElementById('dtTotalGm').textContent = isEnterprise ? '-' : fmtGm(totalNetGp, totalFinal);
+
+  const gmRatio = totalFinal > 0 ? (totalNetGp / totalFinal) : 1;
+
+  // ---- Needs Approval By ladder ----
+  // Only evaluated when an actual discount is applied -- with $0 discount,
+  // no alert/approval state is shown regardless of underlying margin.
+  // Based on the blended TOTAL gross margin only.
+  // >70%: no approval needed. <=70%: VP of Sales.
+  const approvalCard = document.getElementById('approvalCard');
+  const approvalLabel = document.getElementById('approvalLabel');
+  const approvalValue = document.getElementById('approvalValue');
+  approvalCard.classList.remove('ok', 'warn');
+
+  if(isEnterprise){
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'Custom deal';
+  } else if(totalAmt <= 0){
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'No discount applied';
+  } else if(totalFinal <= 0){
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = '—';
+  } else if(gmRatio <= 0.70){
+    approvalCard.classList.add('warn');
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'VP of Sales';
+  } else {
+    approvalCard.classList.add('ok');
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'No approval needed';
+  }
 }
 
 
