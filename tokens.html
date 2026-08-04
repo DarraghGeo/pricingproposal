@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treble Pricing — Bot vs AI Tokens Pricing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+<!--
+  ============================================================================
+  TREBLE PRICING — FEATURE TIERS + BOT CONVERSATIONS / AI TOKENS PRICING
+  ============================================================================
+  A single self-contained pricing calculator mock-up. No build step, no
+  dependencies beyond Google Fonts -- open the file directly in a browser.
+
+  PAGE STRUCTURE
+    1. Feature Tier        -- Starter / Pro / Advanced / Enterprise cards
+    2. Conversations       -- conversation-volume slider (13 steps)
+    3. AI Tokens           -- AI-token-volume slider (18 steps)
+    4. Total (receipt)     -- Feature Tier + both conversation costs = Total
+    5. Meta Fees drawer    -- bottom-up panel, per-country/category Meta cost,
+                             opened by clicking the "(+$X Meta Fee)" note
+
+  HOW THE PRICING WORKS (see the JS "PRICING DATA" and "PRICING LOGIC"
+  sections for the numbers and formulas)
+    - Each tier includes a flat number of free conversations, both regular
+      (Bot & Agent) and AI Tokens: Starter 5,000 / 500, Pro 8,000 / 800,
+      Advanced 10,000 / 1,000 (BOT_INCLUDED / AI_INCLUDED). Both sliders
+      represent ONLY additional volume on top of that included amount --
+      they start at 0 and go up to 200,000. The receipt lines show the true
+      total (included + additional) alongside the breakdown, e.g. "13,000
+      convos: 5,000 included, 8,000 additional".
+    - Bot & Agent additional conversations: 13 fixed steps (0 -> 200,000),
+      each with an exact hardcoded price straight from Ops' sheet
+      (BOT_COST_MAP) -- a flat per-step lookup on the additional amount only.
+    - AI Tokens: an add-on/enhancement layered onto an Agent & Bot
+      conversation, not a standalone conversation type -- 18 fixed steps
+      (0 -> 200,000, a superset that dips lower than Bot's range). Priced
+      with a formula ported from Ops' reference calculator: the whole
+      selected amount is billable (it's already "additional" by definition),
+      and the per-token rate depends on the TOTAL Token volume (included +
+      additional) -- it drops as that total rises (square-root volume
+      discount toward a margin floor at 200,000). So raising the tier (which
+      raises the included amount) can lower the Token rate even with the
+      slider held in the same spot. Because a Token can't exist without its
+      underlying conversation, AI_UNIT_COST intentionally excludes infra
+      cost (AI_INFRA_COST) -- that's already charged once via the Agent &
+      Bot conversation it's attached to; including it here too would
+      double-count the same infrastructure spend.
+    - Meta Fees: real per-message rates by country + message category,
+      configured in the bottom drawer, added on top of the receipt total.
+
+  EDITING GUIDE
+    - Tier prices/features:      HTML, section 1 (search "Feature Tier")
+    - Bot hardcoded prices:      JS, "PRICING DATA" (BOT_COST_MAP)
+    - AI pricing formula:        JS, "PRICING LOGIC" (AI_COST / AI_MARGIN / aiUnitPrice)
+    - Country/category rates:    JS, "META FEES -- DATA" (DEMO_RATES)
+    - Visual tokens (colors,
+      fonts, spacing):           CSS ":root" custom properties, top of <style>
+  ============================================================================
+-->
+
+<style>
+
+  /* ==========================================================================
+     DESIGN TOKENS
+     ========================================================================== */
+  :root{
+    --bg: #F3F1FA;
+    --bg-2: #ECE9F8;
+    --surface: #FFFFFF;
+    --ink: #16152B;
+    --ink-soft: #6E6B84;
+    --ink-faint: #A9A6BE;
+    --border: #E3E0F1;
+    --accent: #5B4FE9;
+    --accent-dark: #4A3FD1;
+    --accent-soft: #EEEBFF;
+    --teal: #1E9E8B;
+    --ai-accent: #C026D3;
+    --ai-accent-dark: #86198F;
+    --ai-accent-soft: #FAE8FF;
+    --radius: 18px;
+    --shadow: 0 1px 2px rgba(22,21,43,0.04), 0 8px 24px rgba(22,21,43,0.06);
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  /* ==========================================================================
+     BASE / RESET
+     ========================================================================== */
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background: radial-gradient(circle at 15% 10%, var(--bg-2), var(--bg) 55%);
+    font-family: var(--font-body);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 24px;
+    min-height: 100%;
+  }
+
+  /* ==========================================================================
+     PAGE LAYOUT
+     ========================================================================== */
+  .page{
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .page-header{
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .page-eyebrow{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .page-title{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 24px;
+    margin: 6px 0 0;
+  }
+
+  /* Generic card container shared by all three numbered sections */
+  .section{
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+  .section-title{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14.5px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 14px;
+  }
+  .section-num{
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 640px){
+    .tiers-row{ grid-template-columns: repeat(2, 1fr); }
+  }
+
+
+  /* ==========================================================================
+     SECTION 1 -- FEATURE TIER CARDS (Starter / Pro / Advanced / Enterprise)
+     ========================================================================== */
+  .tiers-row{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .tier-card{
+    position: relative;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 16px 14px;
+    cursor: pointer;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+  }
+  .tier-card:hover{ transform: translateY(-2px); }
+  .tier-card.selected{
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
+  }
+  .check-badge{
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .tier-card.selected .check-badge{ display: flex; }
+  .check-badge svg{ width: 11px; height: 11px; }
+  .tname{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 6px;
+  }
+  .tname .swatch{ width: 8px; height: 8px; border-radius: 50%; }
+  .tier-card.starter .swatch{ background: var(--teal); }
+  .tier-card.pro .swatch{ background: var(--accent); }
+  .tier-card.advanced .swatch{ background: #2F6FED; }
+  .tier-card.enterprise .swatch{ background: #fff; }
+  .tier-card.enterprise{
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+  .tier-card.enterprise .tname,
+  .tier-card.enterprise .bundled-line{ color: #fff; }
+  .tier-card.enterprise .bundled-line .per{ color: rgba(255,255,255,.55); }
+  .tier-card.enterprise .feat-row{ color: rgba(255,255,255,.75); }
+  .tier-card.enterprise .feat-row .num{ color: #fff; }
+  .tier-card.enterprise .feat-row svg{ color: rgba(255,255,255,.45); }
+  .tier-card.enterprise.selected{
+    box-shadow: 0 0 0 3px rgba(255,255,255,.25), var(--shadow);
+  }
+  .tier-card.enterprise .check-badge{
+    background: #fff;
+    color: var(--ink);
+  }
+  .price{ margin-bottom: 8px; }
+  .bundled-line{ font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+  .bundled-line .per{ font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--ink-faint); }
+  .feat-list{ display: flex; flex-direction: column; gap: 5px; }
+  .feat-row{ display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-soft); }
+  .feat-row .num{ font-family: var(--font-mono); font-weight: 600; color: var(--ink); }
+  .feat-row svg{ width: 12px; height: 12px; flex-shrink: 0; color: var(--ink-faint); }
+
+
+  /* ==========================================================================
+     SECTIONS 2 & 3 -- CONVERSATION SLIDERS (shared styling)
+     ========================================================================== */
+  .bucket-head{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 4px;
+  }
+  .bucket-price{
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--accent);
+  }
+  .slider-block{ position: relative; padding-top: 6px; }
+
+  /* AI Tokens section: distinct treatment from Conversations so it doesn't
+     read as just another identical slider -- it's an add-on layer, not a
+     parallel conversation type. */
+  .ai-tokens-section{
+    background: linear-gradient(160deg, var(--ai-accent-soft) 0%, var(--surface) 55%);
+    border-color: #EBC7F0;
+  }
+  .ai-num{
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent-dark);
+  }
+  .ai-badge{
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ai-accent-dark);
+    background: var(--ai-accent-soft);
+    border: 1px solid #EBC7F0;
+    border-radius: 999px;
+    padding: 3px 9px;
+  }
+  .ai-price{ color: var(--ai-accent); }
+  .ai-slider{ accent-color: var(--ai-accent); }
+  .ai-slider::-webkit-slider-thumb{
+    background: var(--ai-accent);
+    box-shadow: 0 0 0 1.5px var(--ai-accent), 0 4px 10px rgba(192,38,211,.35);
+  }
+  .ai-slider::-moz-range-thumb{
+    background: var(--ai-accent);
+    box-shadow: 0 0 0 1.5px var(--ai-accent), 0 4px 10px rgba(192,38,211,.35);
+  }
+  .interop-note{
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: center;
+    margin-top: -4px;
+  }
+
+  input[type="range"]{
+    -webkit-appearance:none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width: 22px; height:22px;
+    border-radius:50%;
+    background: var(--accent);
+    border: 4px solid #fff;
+    box-shadow: 0 0 0 1.5px var(--accent), 0 4px 10px rgba(91,79,233,.35);
+    cursor: pointer;
+    margin-top: -1px;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 22px; height:22px;
+    border-radius:50%;
+    background: var(--accent);
+    border: 4px solid #fff;
+    box-shadow: 0 0 0 1.5px var(--accent), 0 4px 10px rgba(91,79,233,.35);
+    cursor: pointer;
+  }
+
+  .ticks{ position: relative; height: 16px; margin-top: 6px; }
+  .tick{
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .tick .dash{ width:1px; height:5px; background: var(--ink-faint); }
+  .tick .tlabel{ font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); white-space: nowrap; margin-top: 2px; }
+
+
+  /* ==========================================================================
+     TOTAL -- RECEIPT-STYLE BREAKDOWN
+     Grid columns are explicit (not auto-placed) so every row's $ value lands
+     in the same column regardless of row length -- see the JS note near
+     updateGrandTotal() if you ever add another line item.
+     ========================================================================== */
+  .total-box{
+    background: var(--ink);
+    color: #fff;
+    border-radius: var(--radius);
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    column-gap: 14px;
+    row-gap: 5px;
+    padding: 18px 24px;
+  }
+  .receipt-line{ display: contents; }
+  .receipt-line > span:first-child{
+    grid-column: 1;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    color: rgba(255,255,255,.75);
+  }
+  .receipt-line > span:nth-child(2){
+    grid-column: 2;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    color: rgba(255,255,255,.9);
+    text-align: right;
+  }
+  .line-sub{
+    font-size: 11.5px;
+    color: rgba(255,255,255,.45);
+  }
+  .receipt-divider{
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(255,255,255,.22);
+    margin: 6px 0;
+  }
+  .receipt-total > span:first-child,
+  .receipt-total > span:nth-child(2){
+    font-size: 21px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .total-metafee{
+    grid-column: 3;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 13px;
+    color: rgba(255,255,255,.5);
+    margin-left: 8px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+  }
+  .total-metafee:hover{ color: rgba(255,255,255,.85); }
+  .total-note{
+    grid-column: 1 / -1;
+    margin-top: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,.55);
+  }
+
+
+  /* ==========================================================================
+     META FEES -- BOTTOM-UP DRAWER
+     Fully hidden until the "(+$X Meta Fee)" note in the total box is clicked.
+     A dark backdrop fades in behind it at the same time.
+     ========================================================================== */
+  .backdrop{
+    position: fixed;
+    inset: 0;
+    background: rgba(22,21,43,0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+    z-index: 40;
+  }
+  .backdrop.open{ opacity: 1; pointer-events: auto; }
+
+  .drawer{
+    position: fixed;
+    left: 24px;
+    right: 24px;
+    bottom: 0;
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 28px rgba(22,21,43,0.12);
+    z-index: 50;
+    max-height: 62vh;
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .2s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .drawer.open{ transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .drawer-handle{
+    height: 46px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .drawer-arrow{
+    display: inline-block;
+    transition: transform .35s ease;
+    color: var(--ink-faint);
+    font-size: 11px;
+  }
+  .drawer.open .drawer-arrow{ transform: rotate(180deg); }
+  .drawer-summary{ color: var(--accent); }
+  .drawer-body{
+    overflow-y: auto;
+    padding: 4px 24px 22px;
+    border-top: 1px solid var(--border);
+  }
+  .drawer-subtotal{
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .drawer-subtotal span{ color: var(--accent); font-weight: 700; }
+
+  /* one Meta Fees row: [country] [category] [conversation slider] [price] [remove] */
+  .meta-row{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+  }
+  .meta-row + .meta-row{ border-top: 1px dashed var(--border); }
+  .country-select, .category-select{
+    width: 130px;
+    flex-shrink: 0;
+    padding: 8px 9px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--bg);
+  }
+  .row-slider-wrap{ flex: 1; display: flex; align-items: center; gap: 12px; }
+  .row-slider-wrap input[type="range"]{
+    flex: 1; -webkit-appearance:none; appearance:none;
+    height: 6px; border-radius: 4px; background: var(--border); outline:none;
+  }
+  .row-slider-wrap input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--accent); cursor:pointer;
+  }
+  .row-slider-wrap input[type="range"]::-moz-range-thumb{
+    width:16px; height:16px; border-radius:50%;
+    background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--accent); cursor:pointer;
+  }
+  .row-value{ font-family: var(--font-mono); font-size: 12.5px; font-weight:600; color: var(--ink); min-width: 78px; text-align: right; }
+  .row-price{ font-family: var(--font-mono); font-size: 12.5px; font-weight:700; color: var(--accent); min-width: 68px; text-align: right; flex-shrink:0; }
+  .row-remove{
+    flex-shrink:0; width:22px; height:22px; border-radius:50%;
+    border:1px solid var(--border); background:#fff; color: var(--ink-faint);
+    font-size:14px; line-height:1; cursor:pointer;
+  }
+  .row-remove:hover{ background: var(--bg); color: var(--ink); }
+  .add-row{
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    background: none;
+    border: 1px dashed var(--accent-soft);
+    padding: 7px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .add-row:hover{ background: var(--accent-soft); }
+
+
+  /* ==========================================================================
+     SECTION 4 -- DISCOUNT & MARGIN TOOL
+     ========================================================================== */
+  .discount-section{ display: flex; flex-direction: column; gap: 16px; }
+
+  .discount-disabled-note{
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: -8px;
+    display: none;
+  }
+  .discount-disabled-note.show{ display: block; }
+  .reset-link{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+  }
+  .reset-link:hover{ color: var(--ink); }
+
+  .table-wrap{ overflow-x: auto; }
+  .discount-table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .discount-table th{
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+    padding: 8px 10px;
+    border-bottom: 1.5px solid var(--border);
+    white-space: nowrap;
+  }
+  .discount-table td{
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .discount-table th.num, .discount-table td.num{ text-align: right; font-family: var(--font-mono); }
+  .discount-table td strong{ color: var(--ink); }
+  .discount-table td.strong{ color: var(--ink); font-weight: 700; }
+  .discount-table .input-col{ min-width: 76px; }
+  .discount-table input[type="number"]{
+    width: 68px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 6px;
+    color: var(--ink);
+  }
+  .discount-table input[type="number"]:disabled{ background: var(--bg); color: var(--ink-faint); }
+  .discount-table .muted-cell{ color: var(--ink-faint); }
+  .discount-table tfoot td{
+    border-bottom: none;
+    border-top: 1.5px solid var(--border);
+    font-weight: 700;
+    color: var(--ink);
+    padding-top: 12px;
+  }
+  .gm-pill{ font-weight: 700; }
+  .gm-pill.high{ color: var(--teal); }
+  .gm-pill.low{ color: #B4302F; }
+  .gm-pill.neutral{ color: var(--ink-faint); font-weight: 400; }
+
+  .approval-card{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+  }
+  .approval-label{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+  }
+  .approval-value{ font-size: 16px; color: var(--ink); }
+
+  .approval-card.ok .approval-value{ color: var(--teal); }
+  .approval-card.warn{ background: #FCEFE3; border-color: #EFC29A; }
+  .approval-card.warn .approval-value{ color: #B4600B; }
+
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="page-header">
+    <div class="page-eyebrow">Treble Pricing · Presentation Demo</div>
+    <div class="page-title">Feature Tiers with AI-Powered Conversation Pricing</div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 1 -- FEATURE TIER
+       Click a card to select it -- data-tier drives platformFees[]
+       lookup and the "Feature Tier" receipt line.
+       ============================================================ -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">1</span> Feature Tier</div>
+    <div class="tiers-row" id="tiersRow">
+
+      <div class="tier-card starter selectable" data-tier="starter" onclick="selectTier('starter')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Starter</div>
+        <div class="price"><div class="bundled-line">$399<span class="per">/mo</span></div></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">5,000</span> conversations included</div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">500</span> AI Tokens included</div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">15</span> Agents</div>
+        </div>
+      </div>
+
+      <div class="tier-card pro selectable" data-tier="pro" onclick="selectTier('pro')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Pro</div>
+        <div class="price"><div class="bundled-line">$699<span class="per">/mo</span></div></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">10,000</span> conversations included</div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">1,000</span> AI Tokens included</div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">30</span> Agents</div>
+        </div>
+      </div>
+
+      <div class="tier-card advanced selectable" data-tier="advanced" onclick="selectTier('advanced')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Advanced</div>
+        <div class="price"><div class="bundled-line">$899<span class="per">/mo</span></div></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">15,000</span> conversations included</div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">1,500</span> AI Tokens included</div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">&gt;30</span> Agents</div>
+        </div>
+      </div>
+
+      <div class="tier-card enterprise selectable" data-tier="enterprise" onclick="selectTier('enterprise')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Enterprise</div>
+        <div class="price"><div class="bundled-line">from $5,000<span class="per">/mo</span></div></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Dedicated SLA</div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Custom AI</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 2 -- CONVERSATIONS
+       13-step ladder (0 -> 200,000). Purely ADDITIONAL volume on top of
+       the tier's flat included amount -- starts at 0, no minimum.
+       ============================================================ -->
+  <div class="section">
+    <div class="bucket-head">
+      <div class="section-title" style="margin-bottom:0;"><span class="section-num">2</span> Conversations</div>
+      <div class="bucket-price" id="bucketPriceOut">$0.00/mo</div>
+    </div>
+    <div class="slider-block">
+      <input type="range" id="bucketSlider" min="0" max="12" step="1" value="0" oninput="onBucketChange()">
+      <div class="ticks" id="bucketTicks"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 3 -- AI TOKENS
+       18-step ladder (0 -> 200,000, hardcoded steps). Purely ADDITIONAL
+       AI volume on top of the tier's flat included amount -- starts at
+       0, no minimum. The rate depends on included + additional together.
+       ============================================================ -->
+  <div class="section ai-tokens-section">
+    <div class="bucket-head">
+      <div class="section-title" style="margin-bottom:0;">
+        <span class="section-num ai-num">3</span> AI Tokens
+        <span class="ai-badge">Enhancement</span>
+      </div>
+      <div class="bucket-price ai-price" id="aiBucketPriceOut">$0.00/mo</div>
+    </div>
+    <div class="slider-block">
+      <input type="range" class="ai-slider" id="aiBucketSlider" min="0" max="17" step="1" value="0" oninput="onAiBucketChange()">
+      <div class="ticks" id="aiBucketTicks"></div>
+    </div>
+  </div>
+
+  <div class="interop-note">Conversations and AI Tokens are separate pools — neither covers overflow from the other.</div>
+
+  <!-- ============================================================
+       TOTAL -- itemized receipt. Meta Fee is shown as a separate
+       dimmed note (not folded into the bold Total) and doubles as
+       the button that opens the Meta Fees drawer below.
+       ============================================================ -->
+  <div class="total-box">
+    <div class="receipt-line">
+      <span>Feature Tier</span>
+      <span id="lineTier">$0.00</span>
+    </div>
+    <div class="receipt-line">
+      <span>Conversations <span class="line-sub" id="lineBucketConvos"></span></span>
+      <span id="lineBucket">$0.00</span>
+    </div>
+    <div class="receipt-line">
+      <span>AI Tokens <span class="line-sub" id="lineAiBucketConvos"></span></span>
+      <span id="lineAiBucket">$0.00</span>
+    </div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-line receipt-total">
+      <span>Total</span>
+      <span>
+        <span id="grandTotalOut">$0.00</span><span class="total-metafee" id="grandTotalMetaFee" onclick="toggleDrawer()"></span>
+      </span>
+    </div>
+    <div class="total-note">Includes Onboarding and a Dedicated CSM</div>
+  </div>
+
+  <!-- ============================================================
+       DISCOUNT & MARGIN TOOL -- reuses the Feature Tier / Bot / AI
+       selections from sections 1-3 above (same selectedTier,
+       BUCKETS[bucketIdx], AI_STEPS[aiBucketIdx]). Adapted from the
+       standalone Discount Calculator reference tool: COGS assumptions
+       (platform ~25.75% of list, Regular $0.0018/convo, AI $0.0628/convo,
+       Stripe ~4.5%) are inferred from that tool's sample output, not
+       pulled from its source -- flagged in chat, worth Finance sign-off.
+       ============================================================ -->
+  <div class="section discount-section">
+    <div class="bucket-head">
+      <div class="section-title" style="margin-bottom:0;"><span class="section-num">4</span> Discounts</div>
+      <button class="reset-link" type="button" onclick="resetDiscounts()">Reset</button>
+    </div>
+    <div class="discount-disabled-note" id="discountDisabledNote">Select some additional Conversations or AI Tokens to enable discounts.</div>
+
+    <div class="approval-card" id="approvalCard">
+      <span class="approval-label" id="approvalLabel">Needs Approval By</span>
+      <strong class="approval-value" id="approvalValue">—</strong>
+    </div>
+
+    <div class="table-wrap">
+      <table class="discount-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Purchased</th>
+            <th class="num">List revenue</th>
+            <th class="input-col">Discount %</th>
+            <th class="input-col">Discount $</th>
+            <th class="num">Final revenue</th>
+            <th class="num">Gross margin</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Platform fee</strong></td>
+            <td id="dtPlatformPurchased">—</td>
+            <td class="num" id="dtPlatformList">$0.00</td>
+            <td><span class="muted-cell">Not Eligible</span></td>
+            <td><span class="muted-cell">Not Eligible</span></td>
+            <td class="num strong" id="dtPlatformFinal">$0.00</td>
+            <td class="num" id="dtPlatformGm">-</td>
+          </tr>
+          <tr>
+            <td><strong>Conversations</strong></td>
+            <td id="dtRegularPurchased">—</td>
+            <td class="num" id="dtRegularList">$0.00</td>
+            <td><input type="number" id="dtRegularPct" min="0" max="30" step="1" value="0" oninput="onDiscountPctChange('regular')"></td>
+            <td><input type="number" id="dtRegularAmt" min="0" step="5" value="0" oninput="onDiscountAmtChange('regular')"></td>
+            <td class="num strong" id="dtRegularFinal">$0.00</td>
+            <td class="num" id="dtRegularGm">-</td>
+          </tr>
+          <tr>
+            <td><strong>AI Tokens</strong></td>
+            <td id="dtAiPurchased">—</td>
+            <td class="num" id="dtAiList">$0.00</td>
+            <td><input type="number" id="dtAiPct" min="0" max="30" step="1" value="0" oninput="onDiscountPctChange('ai')"></td>
+            <td><input type="number" id="dtAiAmt" min="0" step="5" value="0" oninput="onDiscountAmtChange('ai')"></td>
+            <td class="num strong" id="dtAiFinal">$0.00</td>
+            <td class="num" id="dtAiGm">-</td>
+          </tr>
+          <tr>
+            <td><strong>Stripe on Meta pass-through</strong></td>
+            <td id="dtStripePurchased">Not provided</td>
+            <td class="num">$0.00</td>
+            <td><span class="muted-cell">-</span></td>
+            <td><span class="muted-cell">-</span></td>
+            <td class="num strong">$0.00</td>
+            <td class="num">-</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">Total</td>
+            <td class="num" id="dtTotalList">$0.00</td>
+            <td class="num" id="dtTotalPct">0.0%</td>
+            <td class="num" id="dtTotalAmt">$0.00</td>
+            <td class="num" id="dtTotalFinal">$0.00</td>
+            <td class="num" id="dtTotalGm">-</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     META FEES -- bottom-up drawer + backdrop (hidden until opened)
+     ============================================================ -->
+<div class="backdrop" id="backdrop" onclick="toggleDrawer()"></div>
+<div class="drawer" id="metaDrawer">
+  <div class="drawer-handle" onclick="toggleDrawer()">
+    <span class="drawer-arrow" id="drawerArrow">&#9650;</span>
+    Meta Fees
+    <span class="drawer-summary">$<span id="metaFeeTabOut">0.00</span></span>
+  </div>
+  <div class="drawer-body">
+    <div id="metaRows"></div>
+    <button class="add-row" onclick="addRow()">+ Add country</button>
+    <div class="drawer-subtotal">Meta Fee subtotal: <span id="metaFeeOut">$0.00</span></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   FORMATTING HELPERS
+   ============================================================================ */
+const fmtInt   = n => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(n));
+const fmtMoney = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** 1500 -> "1.5k", 20000 -> "20k" (used for slider tick labels) */
+function fmtK(n){
+  if(n >= 1000){
+    const k = n / 1000;
+    return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+  }
+  return String(Math.round(n));
+}
+
+
+/* ============================================================================
+   PRICING DATA
+   ============================================================================ */
+
+// ---- Section 2: Bot & Agent conversation bucket ladder (13 steps) ----
+// Step 0 is a new "0 additional conversations" option -- the default, always $0.
+const BUCKETS = [0, 5000, 7000, 10000, 14000, 19500, 27000, 38000, 53000, 74000, 105000, 145000, 200000];
+// Prices for 5,000/7,000/10,000 are corrected here (see comment below) --
+// everything from 14,000 up is unchanged from Ops' original sheet.
+const BOT_COST_MAP = {
+  0: 0,
+  5000: 275,  // was $150 -- fitted to the 14k/19.5k per-convo trend (was cheaper than 7k, which is backwards)
+  7000: 375,  // was $225 -- same fix
+  10000: 515, // was $450 -- same fix
+  14000: 700,
+  19500: 950,
+  27000: 1200,
+  38000: 1550,
+  53000: 1900,
+  74000: 2300,
+  105000: 2800,
+  145000: 3350,
+  200000: 3950
+};
+// The 5,000/7,000/10,000 prices above were re-derived by fitting a power-law
+// volume-discount curve (rate = k * volume^-p) through the two well-behaved,
+// already-decreasing buckets closest to the anomaly (14,000 @ $0.0500/convo
+// and 19,500 @ $0.0487/convo), then extrapolating that same curve backward.
+// The old values (150/225/450) gave a LOWER per-conversation rate than 7,000
+// and 10,000 -- i.e. buying in smaller increments was cheaper than buying
+// more at once, which is backwards for a volume-discount model. The new
+// values keep the per-conversation rate strictly decreasing all the way
+// from 5,000 to 200,000: $0.0550 -> $0.0536 -> $0.0515 -> $0.0500 -> ...
+
+// ---- Section 3: AI Tokens bucket ladder (18 steps) ----
+// Represents ADDITIONAL AI Tokens on top of whatever the tier already
+// includes for free -- same shape as before, just relabeled: these numbers
+// are no longer "totals", they're the extra amount being added.
+const AI_STEPS = [0, 500, 750, 1000, 2000, 3000, 5000, 7000, 10000, 14000, 19500, 27000, 38000, 53000, 74000, 105000, 145000, 200000];
+
+// AI pricing constants -- ported from Ops' reference calculator (index.html).
+// AI_INFRA_COST is intentionally NOT added into AI_UNIT_COST: AI Tokens are
+// an add-on/enhancement layered onto an underlying Agent & Bot conversation
+// (a Token can't exist without that conversation also happening), and that
+// conversation's own infra cost is already charged on the Agent & Bot side
+// (REGULAR_COGS_RATE below). Folding AI_INFRA_COST in here too would double-
+// count the same infrastructure cost across both line items.
+const AI_COST = 0.061;        // underlying per-token cost (model/compute only, no infra)
+const AI_INFRA_COST = 0.0018; // kept for reference/Bot-side parity -- NOT included in AI_UNIT_COST
+const AI_UNIT_COST = AI_COST;
+const AI_MARGIN = 0.70;       // target margin at full volume (200,000)
+
+// ---- Feature tiers ----
+// Starter $399, Pro $699, Advanced $899 (set directly, not derived).
+const platformFees = { starter: 399, pro: 699, advanced: 899, enterprise: null };
+
+// Flat conversations included per tier -- matches the "X,000 conversations
+// included" line on each card. The Bot & Agent slider no longer represents
+// this total; it's purely ADDITIONAL volume on top of this included amount.
+const BOT_INCLUDED = { starter: 5000, pro: 10000, advanced: 15000 };
+
+// Flat AI Tokens included per tier -- matches the "X AI Tokens
+// included" line on each card. Same deal: the AI slider is purely additional
+// volume on top of this included amount (see aiCost() below).
+const AI_INCLUDED = { starter: 500, pro: 1000, advanced: 1500 };
+
+
+/* ============================================================================
+   PRICING LOGIC
+   Both sliders now represent ADDITIONAL conversations only -- whatever the
+   tier already includes for free is added on separately (in the receipt
+   line, not in the slider's own value). Bot pricing is still a flat lookup
+   on the additional amount; AI pricing still uses the volume-discount
+   formula, but now the entire slider value is billable (it's already
+   "additional" by definition) -- the tier's flat AI inclusion only affects
+   the volume used to calculate the per-conversation rate, not how much of
+   the slider gets charged.
+   ============================================================================ */
+
+function botCost(c){ return BOT_COST_MAP[c] ?? 0; }
+
+function roundToNearest5(v){ return Math.round(v / 5) * 5; }
+
+/** Per-conversation AI rate at a given total AI volume -- drops toward the margin floor as volume approaches 200,000. */
+function aiUnitPrice(aiConversations){
+  const floorPrice = AI_UNIT_COST / (1 - AI_MARGIN);
+  const volume = Math.max(1, Math.min(aiConversations, 200000));
+  const discountProgress = Math.sqrt(volume / 200000);
+  const lowVolumePremium = 0.35 * (1 - discountProgress);
+  return floorPrice * (1 + lowVolumePremium);
+}
+
+function currentBotIncluded(){
+  return selectedTier ? (BOT_INCLUDED[selectedTier] || 0) : 0;
+}
+
+function currentAiIncluded(){
+  return selectedTier ? (AI_INCLUDED[selectedTier] || 0) : 0;
+}
+
+/** AI charge for a selected ADDITIONAL volume c: the whole thing is billable, priced at the rate for (included + c) total volume. */
+function aiCost(c){
+  if(c <= 0) return 0;
+  const totalAiVolume = currentAiIncluded() + c;
+  return roundToNearest5(c * aiUnitPrice(totalAiVolume));
+}
+
+
+/* ============================================================================
+   APPLICATION STATE + TIER SELECTION
+   ============================================================================ */
+let selectedTier = null;    // 'starter' | 'pro' | 'advanced' | 'enterprise' | null
+let bucketIdx = 0;          // current index into BUCKETS (section 2) -- additional conversations, starts at 0
+let aiBucketIdx = 0;        // current index into AI_STEPS (section 3) -- additional conversations, starts at 0
+
+function selectTier(id){
+  selectedTier = id;
+  document.querySelectorAll('#tiersRow .tier-card.selectable').forEach(card=>{
+    card.classList.toggle('selected', card.dataset.tier === id);
+  });
+  syncBucket();   // included amount changed -- refresh the Bot line's total
+  syncAiBucket(); // included amount + rate volume changed -- refresh the AI line's total and price
+}
+
+
+/* ============================================================================
+   SLIDER RENDERING + SYNC
+   ============================================================================ */
+
+/** Render the tick marks (dash + k-formatted label) under a slider for the given ladder. */
+function buildTicks(elId, ladder){
+  const len = ladder.length;
+  const ticksEl = document.getElementById(elId);
+  let html = '';
+  ladder.forEach((value, i)=>{
+    const pct = len > 1 ? (i / (len - 1)) * 100 : 0;
+    const style = (pct >= 99.9) ? `left:100%; transform: translateX(-100%);` : `left:${pct}%`;
+    html += `<div class="tick" style="${style}"><div class="dash"></div><div class="tlabel">${fmtK(value)}</div></div>`;
+  });
+  ticksEl.innerHTML = html;
+}
+
+function onBucketChange(){ syncBucket(); }
+
+/** Bot & Agent slider -- its value is purely ADDITIONAL conversations on top of the tier's flat included amount. Free range: 0 to 200,000. */
+function syncBucket(){
+  const slider = document.getElementById('bucketSlider');
+  bucketIdx = parseInt(slider.value, 10);
+
+  const len = BUCKETS.length;
+  const pct = (bucketIdx / (len - 1)) * 100;
+  slider.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+
+  const additional = BUCKETS[bucketIdx];
+  const included = currentBotIncluded();
+  const total = included + additional;
+  const cost = botCost(additional);
+  document.getElementById('bucketPriceOut').textContent = '$' + fmtMoney(cost) + '/mo';
+  document.getElementById('lineBucketConvos').textContent =
+    '(' + fmtInt(total) + ' = ' + fmtInt(included) + ' + ' + fmtInt(additional) + ')';
+
+  updateGrandTotal();
+}
+
+function onAiBucketChange(){ syncAiBucket(); }
+
+/** AI Tokens slider -- its value is purely ADDITIONAL AI Tokens on top of the tier's flat included amount. Free range: 0 to 200,000. */
+function syncAiBucket(){
+  const slider = document.getElementById('aiBucketSlider');
+  aiBucketIdx = parseInt(slider.value, 10);
+
+  const len = AI_STEPS.length;
+  const pct = (aiBucketIdx / (len - 1)) * 100;
+  slider.style.background = `linear-gradient(to right, var(--ai-accent) ${pct}%, var(--border) ${pct}%)`;
+
+  const additional = AI_STEPS[aiBucketIdx];
+  const included = currentAiIncluded();
+  const total = included + additional;
+  const cost = aiCost(additional);
+  document.getElementById('aiBucketPriceOut').textContent = '$' + fmtMoney(cost) + '/mo';
+  document.getElementById('lineAiBucketConvos').textContent =
+    '(' + fmtInt(total) + ' = ' + fmtInt(included) + ' + ' + fmtInt(additional) + ')';
+
+  updateGrandTotal();
+}
+
+
+/* ============================================================================
+   TOTAL / RECEIPT CALCULATION
+   Adding a 4th line item? Add its <span> pair inside .total-box in the HTML,
+   compute its cost here, and fold it into the final grandTotalOut sum.
+   ============================================================================ */
+function updateGrandTotal(){
+  const bucketCost = botCost(BUCKETS[bucketIdx]);
+  const aiBucketCost = aiCost(AI_STEPS[aiBucketIdx]);
+
+  const metaFeeText = document.getElementById('metaFeeOut').textContent.replace(/[^0-9.]/g, '');
+  const metaFee = parseFloat(metaFeeText) || 0;
+  document.getElementById('grandTotalMetaFee').textContent = '(+$' + fmtMoney(metaFee) + ' Meta Fee)';
+
+  document.getElementById('lineBucket').textContent = '$' + fmtMoney(bucketCost);
+  document.getElementById('lineAiBucket').textContent = '$' + fmtMoney(aiBucketCost);
+
+  if(selectedTier === 'enterprise'){
+    document.getElementById('lineTier').textContent = 'Custom';
+    document.getElementById('grandTotalOut').textContent = 'Custom';
+    updateDiscountTool();
+    return;
+  }
+
+  const tierFee = selectedTier ? platformFees[selectedTier] : 0;
+  document.getElementById('lineTier').textContent = '$' + fmtMoney(tierFee);
+  document.getElementById('grandTotalOut').textContent = '$' + fmtMoney(tierFee + bucketCost + aiBucketCost);
+  updateDiscountTool();
+}
+
+
+/* ============================================================================
+   DISCOUNT & MARGIN TOOL
+   Adapted from a standalone reference calculator. Reuses the existing
+   selectedTier / BUCKETS[bucketIdx] / AI_STEPS[aiBucketIdx] state from
+   sections 1-3 above rather than duplicating tier/slider UI.
+
+   COGS assumptions below are INFERRED from the reference tool's sample
+   output (it's a compiled app, not raw source, so these aren't guaranteed
+   exact) -- worth a Finance sign-off before this drives real proposals:
+     - Platform fee COGS  ~= 25.75% of list platform revenue, PLUS the cost
+                            to serve the tier's included Regular conversations
+                            and AI Tokens (see below) -- this row's margin
+                            is deliberately "all-inclusive" of the bundle.
+     - Regular convo COGS = additional (purchased) Regular conversations
+                            x $0.0018/convo -- only the paid portion; the
+                            included portion's cost lives in Platform fee.
+     - AI Token COGS       = additional (purchased) AI Tokens x $0.061/token
+                            (AI_UNIT_COST, model cost only -- no infra
+                            component, since that's already charged via
+                            Regular convo COGS above) -- same paid-only
+                            logic as Regular.
+     - Stripe COGS        ~= 4.5% of the amount it's applied to
+   ============================================================================ */
+const DISCOUNT_CAP_PCT = 30;
+const PLATFORM_COGS_RATE = 0.2575;
+const REGULAR_COGS_RATE = 0.0018;
+const AI_COGS_RATE = AI_UNIT_COST; // 0.061 -- reuses the AI pricing constant above (infra excluded, see note there)
+const STRIPE_RATE = 0.045;
+
+let discountState = {
+  platform: { pct: 0, amt: 0 },
+  regular:  { pct: 0, amt: 0 },
+  ai:       { pct: 0, amt: 0 }
+};
+
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function onDiscountPctChange(row){
+  const input = document.getElementById('dt' + capitalize(row) + 'Pct');
+  const list = discountRowList(row);
+  const pct = clamp(parseFloat(input.value) || 0, 0, DISCOUNT_CAP_PCT);
+  discountState[row].pct = pct;
+  discountState[row].amt = roundToNearest5(list * pct / 100);
+  updateDiscountTool();
+}
+
+function onDiscountAmtChange(row){
+  const input = document.getElementById('dt' + capitalize(row) + 'Amt');
+  const list = discountRowList(row);
+  const maxAmt = list * DISCOUNT_CAP_PCT / 100;
+  const amt = clamp(parseFloat(input.value) || 0, 0, maxAmt);
+  discountState[row].amt = amt;
+  discountState[row].pct = list > 0 ? (amt / list * 100) : 0;
+  updateDiscountTool();
+}
+
+function resetDiscounts(){
+  discountState = { platform: {pct:0,amt:0}, regular: {pct:0,amt:0}, ai: {pct:0,amt:0} };
+  updateDiscountTool();
+}
+
+function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/** List revenue for a given discount-table row, using the live tier/slider state from sections 1-3. */
+function discountRowList(row){
+  if(row === 'platform') return selectedTier === 'enterprise' ? 0 : (selectedTier ? platformFees[selectedTier] : 0);
+  if(row === 'regular') return botCost(BUCKETS[bucketIdx]);
+  if(row === 'ai') return aiCost(AI_STEPS[aiBucketIdx]);
+  return 0;
+}
+
+function fmtGm(netGp, denom){
+  if(denom <= 0) return '-';
+  return (netGp / denom * 100).toFixed(1) + '%';
+}
+
+/** Recompute and render the whole Discount & Margin Tool from current tier/slider/discount state. */
+function updateDiscountTool(){
+  const isEnterprise = selectedTier === 'enterprise';
+  const includedRegular = currentBotIncluded();
+  const includedAi = currentAiIncluded();
+  const additionalRegular = BUCKETS[bucketIdx];
+  const additionalAi = AI_STEPS[aiBucketIdx];
+  const metaCost = parseFloat(document.getElementById('metaFeeOut').textContent.replace(/[^0-9.]/g, '')) || 0;
+
+  // Discounts unlock as soon as EITHER slider has some additional volume --
+  // only disabled when BOTH are still at 0.
+  const toolDisabled = additionalRegular <= 0 && additionalAi <= 0;
+  document.getElementById('discountDisabledNote').classList.toggle('show', toolDisabled && !isEnterprise);
+
+  // ---- Platform fee row ----
+  const platformList = discountRowList('platform');
+  // Platform fee is never discountable.
+  discountState.platform.pct = 0;
+  discountState.platform.amt = 0;
+  const platformFinal = platformList;
+  const platformCogs = isEnterprise ? 0 : (platformList * PLATFORM_COGS_RATE) + (includedRegular * REGULAR_COGS_RATE) + (includedAi * AI_COGS_RATE); // all-inclusive: platform's own cost + cost to serve the included Regular conversations and AI Tokens
+  const platformNetGp = platformFinal - platformCogs;
+
+  document.getElementById('dtPlatformPurchased').textContent = selectedTier ? capitalize(selectedTier) : '—';
+  document.getElementById('dtPlatformList').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(platformList);
+  document.getElementById('dtPlatformFinal').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(platformFinal);
+  document.getElementById('dtPlatformGm').textContent = isEnterprise ? '-' : fmtGm(platformNetGp, platformFinal);
+
+  // ---- Regular conversations row ----
+  const regularList = discountRowList('regular');
+  discountState.regular.amt = clamp(discountState.regular.amt, 0, regularList * DISCOUNT_CAP_PCT / 100);
+  const regularFinal = regularList - discountState.regular.amt;
+  const regularCogs = additionalRegular * REGULAR_COGS_RATE; // only the purchased/additional portion -- included cost now lives in the Platform fee row
+  const regularNetGp = regularFinal - regularCogs;
+
+  document.getElementById('dtRegularPurchased').textContent = fmtInt(additionalRegular) + ' purchased';
+  document.getElementById('dtRegularList').textContent = '$' + fmtMoney(regularList);
+  document.getElementById('dtRegularPct').value = discountState.regular.pct.toFixed(0);
+  document.getElementById('dtRegularAmt').value = discountState.regular.amt.toFixed(0);
+  document.getElementById('dtRegularPct').disabled = toolDisabled || regularList <= 0;
+  document.getElementById('dtRegularAmt').disabled = toolDisabled || regularList <= 0;
+  document.getElementById('dtRegularPct').max = regularList > 0 ? DISCOUNT_CAP_PCT : 0;
+  document.getElementById('dtRegularAmt').max = regularList * DISCOUNT_CAP_PCT / 100;
+  document.getElementById('dtRegularFinal').textContent = '$' + fmtMoney(regularFinal);
+  document.getElementById('dtRegularGm').textContent = fmtGm(regularNetGp, regularFinal);
+
+  // ---- AI Tokens row ----
+  const aiList = discountRowList('ai');
+  discountState.ai.amt = clamp(discountState.ai.amt, 0, aiList * DISCOUNT_CAP_PCT / 100);
+  const aiFinal = aiList - discountState.ai.amt;
+  const aiCogs = additionalAi * AI_COGS_RATE; // only the purchased/additional portion -- included cost now lives in the Platform fee row
+  const aiNetGp = aiFinal - aiCogs;
+
+  document.getElementById('dtAiPurchased').textContent = fmtInt(additionalAi) + ' purchased';
+  document.getElementById('dtAiList').textContent = '$' + fmtMoney(aiList);
+  document.getElementById('dtAiPct').value = discountState.ai.pct.toFixed(0);
+  document.getElementById('dtAiAmt').value = discountState.ai.amt.toFixed(0);
+  document.getElementById('dtAiPct').disabled = toolDisabled || aiList <= 0;
+  document.getElementById('dtAiAmt').disabled = toolDisabled || aiList <= 0;
+  document.getElementById('dtAiPct').max = aiList > 0 ? DISCOUNT_CAP_PCT : 0;
+  document.getElementById('dtAiAmt').max = aiList * DISCOUNT_CAP_PCT / 100;
+  document.getElementById('dtAiFinal').textContent = '$' + fmtMoney(aiFinal);
+  document.getElementById('dtAiGm').textContent = fmtGm(aiNetGp, aiFinal);
+
+  // ---- Stripe on Meta pass-through row ----
+  const stripeCogs = metaCost * STRIPE_RATE; // not shown, used only to derive GM
+  const stripeNetGp = -stripeCogs;
+  document.getElementById('dtStripePurchased').textContent = metaCost > 0 ? 'Provided' : 'Not provided';
+
+  // ---- Totals ----
+  const totalList = (isEnterprise ? 0 : platformList) + regularList + aiList;
+  const totalAmt = (isEnterprise ? 0 : discountState.platform.amt) + discountState.regular.amt + discountState.ai.amt;
+  const totalFinal = (isEnterprise ? 0 : platformFinal) + regularFinal + aiFinal;
+  const totalNetGp = (isEnterprise ? 0 : platformNetGp) + regularNetGp + aiNetGp + stripeNetGp;
+
+  document.getElementById('dtTotalList').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(totalList);
+  document.getElementById('dtTotalPct').textContent = totalList > 0 ? (totalAmt/totalList*100).toFixed(1) + '%' : '0.0%';
+  document.getElementById('dtTotalAmt').textContent = '$' + fmtMoney(totalAmt);
+  document.getElementById('dtTotalFinal').textContent = isEnterprise ? 'Custom' : '$' + fmtMoney(totalFinal);
+  document.getElementById('dtTotalGm').textContent = isEnterprise ? '-' : fmtGm(totalNetGp, totalFinal);
+
+  const gmRatio = totalFinal > 0 ? (totalNetGp / totalFinal) : 1;
+
+  // ---- Needs Approval By ladder ----
+  // Only evaluated when an actual discount is applied -- with $0 discount,
+  // no alert/approval state is shown regardless of underlying margin.
+  // Based on the blended TOTAL gross margin only.
+  // >70%: no approval needed. <=70%: VP of Sales.
+  const approvalCard = document.getElementById('approvalCard');
+  const approvalLabel = document.getElementById('approvalLabel');
+  const approvalValue = document.getElementById('approvalValue');
+  approvalCard.classList.remove('ok', 'warn');
+
+  if(isEnterprise){
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'Custom deal';
+  } else if(totalAmt <= 0){
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'No discount applied';
+  } else if(totalFinal <= 0){
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = '—';
+  } else if(gmRatio <= 0.70){
+    approvalCard.classList.add('warn');
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'VP of Sales';
+  } else {
+    approvalCard.classList.add('ok');
+    approvalLabel.textContent = 'Needs Approval By';
+    approvalValue.textContent = 'No approval needed';
+  }
+}
+
+
+/* ============================================================================
+   META FEES -- DATA
+   Real per-conversation Meta rate card by market + message category.
+   "Service" conversations are currently free everywhere, so they're
+   always priced at $0 rather than looked up in this table.
+   ============================================================================ */
+const DEMO_RATES = {"Argentina": {"Marketing": 0.0618, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Brazil": {"Marketing": 0.0625, "Utility": 0.0068, "Authentication": 0.0068, "Authentication-International": null, "Service": null}, "Chile": {"Marketing": 0.0889, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Colombia": {"Marketing": 0.0125, "Utility": 0.0008, "Authentication": 0.0008, "Authentication-International": null, "Service": null}, "Egypt": {"Marketing": 0.0644, "Utility": 0.0036, "Authentication": 0.0036, "Authentication-International": 0.065, "Service": null}, "France": {"Marketing": 0.0859, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Germany": {"Marketing": 0.1365, "Utility": 0.055, "Authentication": 0.055, "Authentication-International": null, "Service": null}, "Hong Kong": {"Marketing": 0.0732, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Hungary": {"Marketing": 0.086, "Utility": 0.035, "Authentication": 0.035, "Authentication-International": null, "Service": null}, "India": {"Marketing": 0.0118, "Utility": 0.0014, "Authentication": 0.0014, "Authentication-International": 0.0304, "Service": null}, "Indonesia": {"Marketing": 0.0411, "Utility": 0.025, "Authentication": 0.025, "Authentication-International": 0.136, "Service": null}, "Israel": {"Marketing": 0.0353, "Utility": 0.0053, "Authentication": 0.0053, "Authentication-International": null, "Service": null}, "Italy": {"Marketing": 0.0795, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Malaysia": {"Marketing": 0.086, "Utility": 0.014, "Authentication": 0.014, "Authentication-International": 0.0418, "Service": null}, "Mexico": {"Marketing": 0.0305, "Utility": 0.0085, "Authentication": 0.0085, "Authentication-International": null, "Service": null}, "Netherlands": {"Marketing": 0.1597, "Utility": 0.05, "Authentication": 0.05, "Authentication-International": null, "Service": null}, "Nigeria": {"Marketing": 0.0516, "Utility": 0.0067, "Authentication": 0.0067, "Authentication-International": 0.075, "Service": null}, "Pakistan": {"Marketing": 0.0473, "Utility": 0.01, "Authentication": 0.01, "Authentication-International": 0.075, "Service": null}, "Peru": {"Marketing": 0.0703, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Poland": {"Marketing": 0.0366, "Utility": 0.0122, "Authentication": 0.0122, "Authentication-International": null, "Service": null}, "Qatar": {"Marketing": 0.0341, "Utility": 0.012, "Authentication": 0.012, "Authentication-International": null, "Service": null}, "Romania": {"Marketing": 0.086, "Utility": 0.029, "Authentication": 0.029, "Authentication-International": null, "Service": null}, "Russia": {"Marketing": 0.0802, "Utility": 0.04, "Authentication": 0.04, "Authentication-International": null, "Service": null}, "Saudi Arabia": {"Marketing": 0.0501, "Utility": 0.0107, "Authentication": 0.0107, "Authentication-International": 0.0598, "Service": null}, "Singapore": {"Marketing": 0.0732, "Utility": 0.016, "Authentication": 0.016, "Authentication-International": null, "Service": null}, "South Africa": {"Marketing": 0.0379, "Utility": 0.0076, "Authentication": 0.0076, "Authentication-International": 0.02, "Service": null}, "Spain": {"Marketing": 0.0707, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Turkey": {"Marketing": 0.0109, "Utility": 0.0009, "Authentication": 0.0009, "Authentication-International": null, "Service": null}, "United Arab Emirates": {"Marketing": 0.0499, "Utility": 0.0157, "Authentication": 0.0157, "Authentication-International": 0.051, "Service": null}, "United Kingdom": {"Marketing": 0.0635, "Utility": 0.022, "Authentication": 0.022, "Authentication-International": null, "Service": null}, "North America": {"Marketing": 0.025, "Utility": 0.0034, "Authentication": 0.0034, "Authentication-International": null, "Service": null}, "Rest of Africa": {"Marketing": 0.0225, "Utility": 0.004, "Authentication": 0.004, "Authentication-International": null, "Service": null}, "Rest of Asia Pacific": {"Marketing": 0.0732, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Central & Eastern Europe": {"Marketing": 0.086, "Utility": 0.0212, "Authentication": 0.0212, "Authentication-International": null, "Service": null}, "Rest of Latin America": {"Marketing": 0.074, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Middle East": {"Marketing": 0.0341, "Utility": 0.0091, "Authentication": 0.0091, "Authentication-International": null, "Service": null}, "Rest of Western Europe": {"Marketing": 0.0592, "Utility": 0.0171, "Authentication": 0.0171, "Authentication-International": null, "Service": null}, "Other": {"Marketing": 0.0604, "Utility": 0.0077, "Authentication": 0.0077, "Authentication-International": null, "Service": null}};
+const DEMO_COUNTRIES = Object.keys(DEMO_RATES);
+
+
+/* ============================================================================
+   META FEES -- ROW MANAGEMENT
+   Each row = a country + message category + conversation-volume slider.
+   ============================================================================ */
+let rowCounter = 0;
+
+function countryOptions(selected){
+  return DEMO_COUNTRIES.map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+/** Category list depends on the country -- Authentication-International only shows where the rate table has it. */
+function categoryOptions(country, selected){
+  const entry = DEMO_RATES[country] || {};
+  const cats = ['Marketing', 'Utility', 'Authentication'];
+  if(entry['Authentication-International'] != null) cats.push('Authentication-International');
+  cats.push('Service');
+  const current = cats.includes(selected) ? selected : cats[0];
+  return cats.map(c => `<option value="${c}"${c === current ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+function rateFor(country, category){
+  if(category === 'Service') return 0;
+  const entry = DEMO_RATES[country];
+  if(!entry) return 0;
+  const v = entry[category];
+  return v == null ? 0 : v;
+}
+
+function rowTemplate(rowId, country){
+  return `
+    <div class="meta-row" data-row-id="${rowId}">
+      <select class="country-select" onchange="onCountryChange(this)">${countryOptions(country)}</select>
+      <select class="category-select" onchange="onMetaChange()">${categoryOptions(country, 'Marketing')}</select>
+      <div class="row-slider-wrap">
+        <input type="range" class="conv-slider" min="0" max="100000" step="100" value="0" oninput="onMetaChange()">
+        <span class="row-value">0 convs</span>
+      </div>
+      <span class="row-price">$0.00</span>
+      <button class="row-remove" onclick="removeRow(this)">&times;</button>
+    </div>`;
+}
+
+function addRow(){
+  rowCounter++;
+  const country = DEMO_COUNTRIES[(rowCounter - 1) % DEMO_COUNTRIES.length];
+  document.getElementById('metaRows').insertAdjacentHTML('beforeend', rowTemplate(rowCounter, country));
+  onMetaChange();
+}
+
+function removeRow(btn){
+  btn.closest('.meta-row').remove();
+  onMetaChange();
+}
+
+function onCountryChange(selectEl){
+  const row = selectEl.closest('.meta-row');
+  const catSelect = row.querySelector('.category-select');
+  const currentCat = catSelect.value;
+  catSelect.innerHTML = categoryOptions(selectEl.value, currentCat);
+  onMetaChange();
+}
+
+/** Recompute every row's price + the running Meta subtotal, then refresh the main total. */
+function onMetaChange(){
+  let metaCost = 0;
+  document.querySelectorAll('#metaRows .meta-row').forEach(row=>{
+    const country = row.querySelector('.country-select').value;
+    const category = row.querySelector('.category-select').value;
+    const slider = row.querySelector('.conv-slider');
+    const val = parseInt(slider.value, 10);
+    const rate = rateFor(country, category);
+    const rowCost = val * rate;
+
+    row.querySelector('.row-value').textContent = fmtInt(val) + ' convs';
+    row.querySelector('.row-price').textContent = '$' + fmtMoney(rowCost);
+    metaCost += rowCost;
+  });
+
+  document.getElementById('metaFeeOut').textContent = '$' + fmtMoney(metaCost);
+  document.getElementById('metaFeeTabOut').textContent = fmtMoney(metaCost);
+  updateGrandTotal();
+}
+
+
+/* ============================================================================
+   META FEES -- DRAWER TOGGLE
+   ============================================================================ */
+function toggleDrawer(){
+  const drawer = document.getElementById('metaDrawer');
+  const open = drawer.classList.toggle('open');
+  document.getElementById('backdrop').classList.toggle('open', open);
+}
+
+
+/* ============================================================================
+   INIT
+   ============================================================================ */
+buildTicks('bucketTicks', BUCKETS);
+buildTicks('aiBucketTicks', AI_STEPS);
+selectTier('pro');
+</script>
+
+</body>
+</html>
