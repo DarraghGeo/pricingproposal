@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treble pricing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;900&display=swap" rel="stylesheet">
+<style>
+  /* Consumed by the pricing script when it paints the slider fills. */
+  :root{
+    --accent: #000000;
+    --ai-accent: #7347FF;
+    --border: rgba(0,0,0,0.10);
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; }
+  body{
+    background:#F2F6F2;
+    font-family:'Work Sans', system-ui, -apple-system, sans-serif;
+    color:#000;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{ color:#000; }
+  a:hover{ opacity:.72; }
+
+  .stage{ position:relative; min-height:100vh; padding:56px 32px 96px; overflow:hidden; }
+  .bg-mark{ position:absolute; top:-140px; right:-160px; width:620px; color:#000; opacity:.05; pointer-events:none; }
+  .bg-mark svg{ width:100%; height:auto; display:block; }
+  .page{ position:relative; max-width:1140px; margin:0 auto; display:flex; flex-direction:column; gap:24px; }
+
+  /* ---------- Header ---------- */
+  .page-header{ display:flex; align-items:flex-end; justify-content:space-between; gap:32px; padding-bottom:8px; }
+  .brand{ display:flex; flex-direction:column; gap:16px; }
+  .brand .logo{ height:26px; width:auto; align-self:flex-start; }
+  .brand .logo svg{ height:26px; width:auto; display:block; }
+  .page-title{ font-size:40px; font-weight:900; line-height:1.05; letter-spacing:-0.01em; margin:0; }
+
+  .lang-switch{ flex-shrink:0; display:flex; gap:4px; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:999px; padding:4px; }
+  .lang-switch button{
+    font-family:inherit; font-size:12px; font-weight:600; letter-spacing:.02em;
+    color:rgba(0,0,0,.42); background:none; border:none; border-radius:999px;
+    padding:6px 14px; cursor:pointer; transition:background 180ms cubic-bezier(.2,.8,.2,1);
+  }
+  .lang-switch button:hover{ background:rgba(0,0,0,0.04); }
+  .lang-switch button.active{ background:#000; color:#F2F6F2; }
+
+  /* ---------- Section shell ---------- */
+  .section{ background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:16px; padding:24px; }
+  .section-title{ display:flex; align-items:center; gap:10px; font-size:16px; font-weight:600; }
+  .section-num{
+    width:22px; height:22px; border-radius:999px; background:#000; color:#F2F6F2;
+    font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .section-num.ai{ background:#7347FF; color:#fff; }
+
+  /* ---------- Tier cards ---------- */
+  .tiers-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:20px; }
+  .tier-card{
+    position:relative; background:#F2F6F2; border:1px solid rgba(0,0,0,0.08);
+    border-radius:16px; padding:20px; cursor:pointer;
+    transition:border-color 180ms cubic-bezier(.2,.8,.2,1), background 180ms cubic-bezier(.2,.8,.2,1);
+  }
+  .tier-card:hover{ background:#EDF2ED; }
+  .tier-card.selected{ border-color:#000; box-shadow:0 0 0 2px #000; }
+  .check-badge{
+    position:absolute; top:16px; right:16px; width:22px; height:22px; border-radius:999px;
+    background:#000; color:#fff; display:none; align-items:center; justify-content:center;
+  }
+  .tier-card.selected .check-badge{ display:flex; }
+  .check-badge svg{ width:12px; height:12px; }
+  .tname{ display:flex; align-items:center; gap:8px; font-size:16px; font-weight:600; margin-bottom:12px; }
+  .tname .swatch{ width:8px; height:8px; border-radius:999px; flex-shrink:0; }
+  .tier-card.starter  .swatch{ background:#82C7BF; }
+  .tier-card.pro      .swatch{ background:#7347FF; }
+  .tier-card.advanced .swatch{ background:#6FB3E5; }
+  .tier-card.enterprise .swatch{ background:#FAB52E; }
+  .bundled-line{ font-size:30px; font-weight:900; line-height:1.1; letter-spacing:-0.01em; margin-bottom:16px; }
+  .bundled-line .per{ font-size:13px; font-weight:500; color:rgba(0,0,0,.42); letter-spacing:0; }
+  .feat-list{ display:flex; flex-direction:column; gap:8px; }
+  .feat-row{ display:flex; align-items:center; gap:8px; font-size:13px; line-height:1.3; color:rgba(0,0,0,.62); }
+  .feat-row .num{ font-weight:600; color:#000; }
+  .feat-row svg{ width:13px; height:13px; flex-shrink:0; color:rgba(0,0,0,.42); }
+
+  .tier-card.enterprise{ background:#000; border-color:#000; color:#F2F6F2; }
+  .tier-card.enterprise:hover{ background:#000; opacity:.92; }
+  .tier-card.enterprise.selected{ box-shadow:0 0 0 2px rgba(0,0,0,.35); }
+  .tier-card.enterprise .check-badge{ background:#F2F6F2; color:#000; }
+  .tier-card.enterprise .bundled-line .per{ color:rgba(255,255,255,.5); }
+  .tier-card.enterprise .feat-row{ color:rgba(255,255,255,.7); }
+  .tier-card.enterprise .feat-row svg{ color:rgba(255,255,255,.5); }
+
+  /* ---------- Sliders ---------- */
+  .bucket-head{ display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .bucket-price{ font-size:20px; font-weight:900; letter-spacing:-0.01em; font-variant-numeric:tabular-nums; }
+  .bucket-price.ai{ color:#7347FF; }
+  .ai-badge{
+    font-size:11px; font-weight:600; color:#7347FF;
+    border:1px solid rgba(115,71,255,.3); background:rgba(115,71,255,.07);
+    border-radius:999px; padding:4px 10px;
+  }
+  .bucket-readout{ display:flex; align-items:baseline; gap:10px; margin:14px 0 18px; }
+  .bucket-readout .big{ font-size:30px; font-weight:900; letter-spacing:-0.01em; line-height:1; font-variant-numeric:tabular-nums; }
+  .bucket-readout .sub{ font-size:13px; font-weight:500; color:rgba(0,0,0,.62); }
+  .slider-block{ position:relative; }
+
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:6px; border-radius:999px;
+    background:rgba(0,0,0,0.10); outline:none; cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+    background:#000; border:4px solid #fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.9), 0 1px 2px rgba(0,0,0,.2); cursor:pointer;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:20px; height:20px; border-radius:50%;
+    background:#000; border:4px solid #fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.9); cursor:pointer;
+  }
+  .ai-slider::-webkit-slider-thumb{ background:#7347FF; box-shadow:0 0 0 1px #7347FF, 0 1px 2px rgba(0,0,0,.2); }
+  .ai-slider::-moz-range-thumb{ background:#7347FF; box-shadow:0 0 0 1px #7347FF; }
+
+  .ticks{ position:relative; height:18px; margin-top:8px; }
+  .tick{ position:absolute; top:0; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; }
+  .tick .dash{ width:1px; height:5px; background:rgba(0,0,0,0.24); }
+  .tick .tlabel{ font-size:10px; font-weight:500; color:rgba(0,0,0,.42); white-space:nowrap; margin-top:3px; font-variant-numeric:tabular-nums; }
+
+  .interop-note{ text-align:center; font-size:13px; line-height:1.4; color:rgba(0,0,0,.42); margin:-6px 0 0; }
+
+  /* ---------- Receipt ---------- */
+  .total-box{
+    background:#000; color:#F2F6F2; border-radius:16px;
+    display:grid; grid-template-columns:1fr auto auto; align-items:baseline;
+    column-gap:16px; row-gap:8px; padding:28px 32px;
+  }
+  .receipt-line{ display:contents; }
+  .receipt-line > span:first-child{ grid-column:1; font-size:15px; color:rgba(255,255,255,.62); }
+  .receipt-line > span:nth-child(2){ grid-column:2; font-size:15px; color:rgba(255,255,255,.9); text-align:right; font-variant-numeric:tabular-nums; }
+  .line-sub{ font-size:12px; color:rgba(255,255,255,.42); }
+  .receipt-divider{ grid-column:1 / -1; border-top:1px solid rgba(255,255,255,.12); margin:10px 0; }
+  .receipt-total > span:first-child,
+  .receipt-total > span:nth-child(2) #grandTotalOut{
+    font-size:24px; font-weight:900; letter-spacing:-0.01em; color:#fff;
+  }
+  .total-metafee{
+    grid-column:3; font-size:14px; font-weight:500; color:rgba(255,255,255,.5);
+    margin-left:8px; cursor:pointer; border-bottom:1px dotted rgba(255,255,255,.4); padding-bottom:2px;
+  }
+  .total-metafee:hover{ color:rgba(255,255,255,.9); }
+  .total-note{ grid-column:1 / -1; margin-top:14px; font-size:12px; color:rgba(255,255,255,.5); }
+
+  /* ---------- Meta fees drawer ---------- */
+  .backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,0.45);
+    opacity:0; pointer-events:none; transition:opacity 240ms cubic-bezier(.2,.8,.2,1); z-index:40;
+  }
+  .backdrop.open{ opacity:1; pointer-events:auto; }
+  .drawer{
+    position:fixed; left:24px; right:24px; bottom:0; max-width:960px; margin:0 auto;
+    background:#fff; border:1px solid rgba(0,0,0,0.08); border-bottom:none;
+    border-radius:16px 16px 0 0; box-shadow:0 24px 64px rgba(0,0,0,0.14);
+    z-index:50; max-height:64vh; transform:translateY(100%); opacity:0; pointer-events:none;
+    transition:transform 240ms cubic-bezier(.2,.8,.2,1), opacity 180ms cubic-bezier(.2,.8,.2,1);
+    display:flex; flex-direction:column;
+  }
+  .drawer.open{ transform:translateY(0); opacity:1; pointer-events:auto; }
+  .drawer-handle{
+    height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    gap:10px; cursor:pointer; font-size:15px; font-weight:600; color:#000;
+  }
+  .drawer-arrow{ display:inline-block; transition:transform 240ms cubic-bezier(.2,.8,.2,1); color:rgba(0,0,0,.42); font-size:11px; }
+  .drawer.open .drawer-arrow{ transform:rotate(180deg); }
+  .drawer-summary{ color:#7347FF; font-weight:600; }
+  .drawer-body{ overflow-y:auto; padding:8px 32px 28px; border-top:1px solid rgba(0,0,0,0.08); }
+  .drawer-subtotal{
+    margin-top:20px; padding-top:16px; border-top:1px solid rgba(0,0,0,0.08);
+    font-size:14px; font-weight:500; color:rgba(0,0,0,.62);
+  }
+  .drawer-subtotal span{ color:#000; font-weight:600; font-variant-numeric:tabular-nums; }
+
+  .meta-row{ display:flex; align-items:center; gap:12px; padding:10px 0; }
+  .meta-row + .meta-row{ border-top:1px solid rgba(0,0,0,0.08); }
+  .country-select, .category-select{
+    width:148px; flex-shrink:0; padding:9px 10px;
+    border:1px solid rgba(0,0,0,0.16); border-radius:12px;
+    font-family:inherit; font-size:13px; font-weight:500; color:#000; background:#fff; appearance:none;
+  }
+  .row-slider-wrap{ flex:1; display:flex; align-items:center; gap:14px; }
+  .row-slider-wrap input[type="range"]{ flex:1; height:4px; }
+  .row-slider-wrap input[type="range"]::-webkit-slider-thumb{ width:16px; height:16px; border-width:3px; }
+  .row-slider-wrap input[type="range"]::-moz-range-thumb{ width:16px; height:16px; border-width:3px; }
+  .row-value{ font-size:13px; font-weight:500; color:rgba(0,0,0,.62); min-width:92px; text-align:right; font-variant-numeric:tabular-nums; }
+  .row-price{ font-size:13px; font-weight:600; color:#7347FF; min-width:72px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
+  .row-remove{
+    flex-shrink:0; width:26px; height:26px; border-radius:999px;
+    border:1px solid rgba(0,0,0,0.16); background:#fff; color:rgba(0,0,0,.42);
+    font-size:15px; line-height:1; cursor:pointer; transition:background 180ms cubic-bezier(.2,.8,.2,1);
+  }
+  .row-remove:hover{ background:rgba(0,0,0,0.04); color:#000; }
+  .add-row{
+    margin-top:14px; font-family:inherit; font-size:13px; font-weight:500; color:#000;
+    background:none; border:1px dashed rgba(0,0,0,0.24); padding:9px 16px; border-radius:999px;
+    cursor:pointer; transition:background 180ms cubic-bezier(.2,.8,.2,1);
+  }
+  .add-row:hover{ background:rgba(0,0,0,0.04); }
+
+  @media (max-width: 900px){
+    .tiers-row{ grid-template-columns:repeat(2,1fr); }
+    .page-header{ flex-direction:column; align-items:flex-start; gap:20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="bg-mark"><svg width="154" height="154" viewBox="0 0 154 154" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M127.999 95.8022C124.283 95.8022 120.808 97.4674 118.531 99.9651L86.2909 82.2429C86.171 82.1239 86.0512 82.1239 85.9313 82.005C84.1336 81.0535 81.9763 80.4587 79.819 80.4587C78.7403 80.4587 77.6617 80.5777 76.583 80.8156C75.5044 81.0535 74.4257 81.5292 73.3471 82.1239C69.5118 84.3838 66.8751 88.4278 66.8751 93.1855V127.916C63.3995 128.749 60.5231 131.009 58.8452 134.101C57.7665 135.885 57.2871 138.026 57.2871 140.286C57.2871 147.304 63.0399 153.013 70.1111 153.013C77.1823 153.013 82.9351 147.304 82.9351 140.286C82.9351 138.026 82.3358 135.885 81.2572 134.101C79.5793 131.128 76.7029 128.868 73.2272 127.916V92.9476C73.2272 89.3793 76.1036 86.5248 79.6991 86.5248C80.7778 86.5248 81.8564 86.7626 82.8152 87.2384L92.643 92.5908L115.534 105.318C115.295 106.388 115.175 107.458 115.175 108.529C115.175 110.789 115.774 112.93 116.853 114.714C119.01 118.639 123.205 121.256 128.119 121.256C135.19 121.256 140.943 115.546 140.943 108.529C140.823 101.511 135.07 95.8022 127.999 95.8022ZM75.7441 137.313C76.2235 138.264 76.583 139.335 76.583 140.405C76.583 143.973 73.7066 146.828 70.1111 146.828C66.5156 146.828 63.6392 143.973 63.6392 140.405C63.6392 139.335 63.8789 138.264 64.4781 137.313C65.5568 135.41 67.7141 133.982 70.1111 133.982C72.6279 133.982 74.6654 135.41 75.7441 137.313ZM127.999 114.952C125.602 114.952 123.564 113.643 122.366 111.74C121.886 110.789 121.527 109.718 121.527 108.648C121.527 108.529 121.527 108.41 121.527 108.291C121.647 106.269 122.725 104.604 124.164 103.533C125.242 102.82 126.561 102.344 127.879 102.344C131.474 102.344 134.351 105.199 134.351 108.767C134.351 112.097 131.474 114.952 127.999 114.952Z" fill="currentColor"></path>
+<path d="M140.824 44.7758C140.824 37.7582 135.071 32.049 128 32.049C123.206 32.049 119.011 34.6657 116.734 38.5908C115.655 40.3749 115.056 42.5159 115.056 44.7758C115.056 45.8462 115.176 46.9167 115.416 47.9872L92.6442 60.595L82.8165 65.9474C81.9775 66.4231 80.8989 66.7799 79.8202 66.7799C76.2247 66.7799 73.3483 63.9253 73.3483 60.3571V25.2694C76.824 24.4368 79.7004 22.1769 81.3783 19.0844C82.4569 17.3003 83.0562 15.1594 83.0562 12.8995C83.0562 5.88192 77.3034 0.172729 70.2322 0.172729C63.161 0.172729 57.4082 5.88192 57.4082 12.8995C57.4082 15.1594 58.0075 17.3003 58.9663 19.0844C60.6442 22.058 63.5206 24.3178 66.9962 25.2694V60.0003C66.9962 64.7579 69.6329 68.8019 73.4681 71.0618C74.4269 71.6565 75.5056 72.0134 76.7041 72.3702C77.7828 72.6081 78.8614 72.727 79.9401 72.727C82.0974 72.727 84.2547 72.1323 86.0524 71.1808C86.1723 71.0618 86.2921 71.0618 86.412 70.9429L118.532 53.2206C120.929 55.8373 124.285 57.3836 128 57.3836C135.071 57.6214 140.824 51.7933 140.824 44.7758ZM70.2322 19.3223C67.8352 19.3223 65.6779 18.0139 64.5992 15.9919C64.1198 15.0404 63.7603 13.9699 63.7603 12.8995C63.7603 9.33122 66.6367 6.47663 70.2322 6.47663C73.8277 6.47663 76.7041 9.33122 76.7041 12.8995C76.7041 13.9699 76.4644 15.0404 75.8652 15.9919C74.6667 18.0139 72.6292 19.3223 70.2322 19.3223ZM134.352 44.7758C134.352 48.344 131.476 51.1986 127.88 51.1986C126.442 51.1986 125.243 50.7228 124.165 50.0092C122.607 48.9387 121.648 47.1546 121.528 45.2515C121.528 45.1326 121.528 45.0137 121.528 44.8947C121.528 43.7053 121.768 42.6348 122.367 41.8022C123.446 39.8992 125.603 38.5908 128 38.5908C131.476 38.4719 134.352 41.3265 134.352 44.7758Z" fill="currentColor"></path>
+<path d="M6.95203 31.5736C0.839661 35.0229 -1.31765 42.873 2.15801 48.939C4.55502 53.102 8.98948 55.3619 13.4239 55.3619C15.5812 55.3619 17.7386 54.7672 19.6562 53.6967C20.615 53.102 21.4539 52.5073 22.2929 51.7936L44.7049 65.234L54.2929 70.9432C55.1319 71.5379 55.9708 72.2515 56.4502 73.2031C58.248 76.2956 57.1693 80.2206 54.0532 81.8858L23.3715 99.3702C20.8547 96.8724 17.4989 95.4451 14.0232 95.5641C11.8659 95.5641 9.82843 96.1588 7.79098 97.2292C1.67861 100.679 -0.478693 108.529 2.99697 114.595C6.47263 120.661 14.3827 122.802 20.4951 119.352C22.4127 118.282 23.9708 116.736 25.1693 114.833C26.967 111.859 27.5663 108.291 26.6075 104.841L57.0495 87.595C61.1244 85.2162 63.5214 80.9343 63.5214 76.5334C63.5214 75.344 63.4015 74.2736 63.042 73.2031C62.8023 72.1326 62.3229 71.1811 61.8435 70.2295C60.7648 68.3265 59.2068 66.7802 57.409 65.7098C57.2892 65.5908 57.1693 65.5908 57.0495 65.4719L25.5288 46.5602C26.6075 43.2298 26.3678 39.5427 24.4502 36.3312C20.9745 30.1463 13.1842 28.0053 6.95203 31.5736ZM19.776 105.079C20.9745 107.22 20.8547 109.599 19.6562 111.502C19.0569 112.454 18.3378 113.167 17.379 113.762C14.2629 115.546 10.4277 114.476 8.62993 111.383C6.83218 108.291 7.91083 104.485 11.0269 102.701C11.9857 102.106 13.0644 101.868 14.143 101.868C16.3004 101.868 18.5775 102.938 19.776 105.079ZM10.188 37.0449C13.3041 35.2608 17.1393 36.3312 18.9371 39.4237C19.6562 40.6131 19.8959 41.9215 19.776 43.2298C19.5363 45.1329 18.5775 46.7981 16.8996 47.8685C16.7798 47.9875 16.6599 47.9875 16.5401 48.1064C15.5812 48.7011 14.5026 48.939 13.4239 48.939C11.1468 48.939 8.98948 47.7496 7.79098 45.7276C5.99322 42.7541 7.07188 38.829 10.188 37.0449Z" fill="currentColor"></path>
+</svg></div>
+
+  <div class="page">
+
+    <div class="page-header">
+      <div class="brand">
+        <span class="logo"><svg width="600" height="154" viewBox="0 0 600 154" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M127.999 95.8022C124.283 95.8022 120.808 97.4674 118.531 99.9651L86.2909 82.2429C86.171 82.1239 86.0512 82.1239 85.9313 82.005C84.1336 81.0535 81.9763 80.4587 79.819 80.4587C78.7403 80.4587 77.6617 80.5777 76.583 80.8156C75.5044 81.0535 74.4257 81.5292 73.3471 82.1239C69.5118 84.3838 66.8751 88.4278 66.8751 93.1855V127.916C63.3995 128.749 60.5231 131.009 58.8452 134.101C57.7665 135.885 57.2871 138.026 57.2871 140.286C57.2871 147.304 63.0399 153.013 70.1111 153.013C77.1823 153.013 82.9351 147.304 82.9351 140.286C82.9351 138.026 82.3358 135.885 81.2572 134.101C79.5793 131.128 76.7029 128.868 73.2272 127.916V92.9476C73.2272 89.3793 76.1036 86.5248 79.6991 86.5248C80.7778 86.5248 81.8564 86.7626 82.8152 87.2384L92.643 92.5908L115.534 105.318C115.295 106.388 115.175 107.458 115.175 108.529C115.175 110.789 115.774 112.93 116.853 114.714C119.01 118.639 123.205 121.256 128.119 121.256C135.19 121.256 140.943 115.546 140.943 108.529C140.823 101.511 135.07 95.8022 127.999 95.8022ZM75.7441 137.313C76.2235 138.264 76.583 139.335 76.583 140.405C76.583 143.973 73.7066 146.828 70.1111 146.828C66.5156 146.828 63.6392 143.973 63.6392 140.405C63.6392 139.335 63.8789 138.264 64.4781 137.313C65.5568 135.41 67.7141 133.982 70.1111 133.982C72.6279 133.982 74.6654 135.41 75.7441 137.313ZM127.999 114.952C125.602 114.952 123.564 113.643 122.366 111.74C121.886 110.789 121.527 109.718 121.527 108.648C121.527 108.529 121.527 108.41 121.527 108.291C121.647 106.269 122.725 104.604 124.164 103.533C125.242 102.82 126.561 102.344 127.879 102.344C131.474 102.344 134.351 105.199 134.351 108.767C134.351 112.097 131.474 114.952 127.999 114.952Z" fill="black"></path>
+<path d="M140.824 44.7758C140.824 37.7582 135.071 32.049 128 32.049C123.206 32.049 119.011 34.6657 116.734 38.5908C115.655 40.3749 115.056 42.5159 115.056 44.7758C115.056 45.8462 115.176 46.9167 115.416 47.9872L92.6442 60.595L82.8165 65.9474C81.9775 66.4231 80.8989 66.7799 79.8202 66.7799C76.2247 66.7799 73.3483 63.9253 73.3483 60.3571V25.2694C76.824 24.4368 79.7004 22.1769 81.3783 19.0844C82.4569 17.3003 83.0562 15.1594 83.0562 12.8995C83.0562 5.88192 77.3034 0.172729 70.2322 0.172729C63.161 0.172729 57.4082 5.88192 57.4082 12.8995C57.4082 15.1594 58.0075 17.3003 58.9663 19.0844C60.6442 22.058 63.5206 24.3178 66.9962 25.2694V60.0003C66.9962 64.7579 69.6329 68.8019 73.4681 71.0618C74.4269 71.6565 75.5056 72.0134 76.7041 72.3702C77.7828 72.6081 78.8614 72.727 79.9401 72.727C82.0974 72.727 84.2547 72.1323 86.0524 71.1808C86.1723 71.0618 86.2921 71.0618 86.412 70.9429L118.532 53.2206C120.929 55.8373 124.285 57.3836 128 57.3836C135.071 57.6214 140.824 51.7933 140.824 44.7758ZM70.2322 19.3223C67.8352 19.3223 65.6779 18.0139 64.5992 15.9919C64.1198 15.0404 63.7603 13.9699 63.7603 12.8995C63.7603 9.33122 66.6367 6.47663 70.2322 6.47663C73.8277 6.47663 76.7041 9.33122 76.7041 12.8995C76.7041 13.9699 76.4644 15.0404 75.8652 15.9919C74.6667 18.0139 72.6292 19.3223 70.2322 19.3223ZM134.352 44.7758C134.352 48.344 131.476 51.1986 127.88 51.1986C126.442 51.1986 125.243 50.7228 124.165 50.0092C122.607 48.9387 121.648 47.1546 121.528 45.2515C121.528 45.1326 121.528 45.0137 121.528 44.8947C121.528 43.7053 121.768 42.6348 122.367 41.8022C123.446 39.8992 125.603 38.5908 128 38.5908C131.476 38.4719 134.352 41.3265 134.352 44.7758Z" fill="black"></path>
+<path d="M6.95203 31.5736C0.839661 35.0229 -1.31765 42.873 2.15801 48.939C4.55502 53.102 8.98948 55.3619 13.4239 55.3619C15.5812 55.3619 17.7386 54.7672 19.6562 53.6967C20.615 53.102 21.4539 52.5073 22.2929 51.7936L44.7049 65.234L54.2929 70.9432C55.1319 71.5379 55.9708 72.2515 56.4502 73.2031C58.248 76.2956 57.1693 80.2206 54.0532 81.8858L23.3715 99.3702C20.8547 96.8724 17.4989 95.4451 14.0232 95.5641C11.8659 95.5641 9.82843 96.1588 7.79098 97.2292C1.67861 100.679 -0.478693 108.529 2.99697 114.595C6.47263 120.661 14.3827 122.802 20.4951 119.352C22.4127 118.282 23.9708 116.736 25.1693 114.833C26.967 111.859 27.5663 108.291 26.6075 104.841L57.0495 87.595C61.1244 85.2162 63.5214 80.9343 63.5214 76.5334C63.5214 75.344 63.4015 74.2736 63.042 73.2031C62.8023 72.1326 62.3229 71.1811 61.8435 70.2295C60.7648 68.3265 59.2068 66.7802 57.409 65.7098C57.2892 65.5908 57.1693 65.5908 57.0495 65.4719L25.5288 46.5602C26.6075 43.2298 26.3678 39.5427 24.4502 36.3312C20.9745 30.1463 13.1842 28.0053 6.95203 31.5736ZM19.776 105.079C20.9745 107.22 20.8547 109.599 19.6562 111.502C19.0569 112.454 18.3378 113.167 17.379 113.762C14.2629 115.546 10.4277 114.476 8.62993 111.383C6.83218 108.291 7.91083 104.485 11.0269 102.701C11.9857 102.106 13.0644 101.868 14.143 101.868C16.3004 101.868 18.5775 102.938 19.776 105.079ZM10.188 37.0449C13.3041 35.2608 17.1393 36.3312 18.9371 39.4237C19.6562 40.6131 19.8959 41.9215 19.776 43.2298C19.5363 45.1329 18.5775 46.7981 16.8996 47.8685C16.7798 47.9875 16.6599 47.9875 16.5401 48.1064C15.5812 48.7011 14.5026 48.939 13.4239 48.939C11.1468 48.939 8.98948 47.7496 7.79098 45.7276C5.99322 42.7541 7.07188 38.829 10.188 37.0449Z" fill="black"></path>
+<path d="M195.742 68.4901V106.024C195.742 109.122 197.893 111.148 201.239 111.148H213.43V118.654H200.761C192.873 118.654 187.854 113.65 187.854 105.786V68.4901H173.99V61.5791H187.854V40.9652H195.742V61.4599H213.43V68.3709H195.742V68.4901Z" fill="black"></path>
+<path d="M257.889 61.4609V69.4443H249.045C240.44 69.4443 234.703 76.9511 234.703 88.5092V118.417H226.815V61.4609H233.269L234.703 71.47C236.376 65.5122 242.113 61.4609 249.523 61.4609H257.889Z" fill="black"></path>
+<path d="M319.673 93.1563H272.705C273.9 105.191 281.668 112.936 293.141 112.936C301.866 112.936 309.395 107.574 311.905 99.7099L318.239 102.57C314.654 112.936 304.495 119.966 293.022 119.966C275.931 119.966 264.578 107.932 264.578 90.1775C264.578 72.4233 275.812 60.5078 292.663 60.5078C308.798 60.5078 319.554 71.8276 319.554 88.8668V93.1563H319.673ZM272.705 87.6752H311.905C311.546 75.1639 304.256 67.1805 292.663 67.1805C281.31 67.1805 273.541 75.1639 272.705 87.6752Z" fill="black"></path>
+<path d="M388.047 90.0565C388.047 107.811 377.65 119.845 361.754 119.845C353.149 119.845 345.261 115.079 342.393 108.168H342.274L340.839 118.535H334.386V33.2195H342.274V71.9449H342.393C345.381 65.0339 353.149 60.3869 361.754 60.3869C377.65 60.3869 388.047 72.3024 388.047 90.0565ZM379.92 90.0565C379.92 76.4728 372.272 67.5362 360.918 67.5362C349.803 67.5362 342.393 76.4728 342.393 90.0565C342.393 103.64 349.803 112.696 360.918 112.696C372.152 112.696 379.92 103.64 379.92 90.0565Z" fill="black"></path>
+<path d="M415.164 118.654C407.156 118.654 402.137 113.649 402.137 105.785V33.2195H410.025V106.023C410.025 109.002 412.056 111.028 415.164 111.028H425.203V118.654H415.164V118.654Z" fill="black"></path>
+<path d="M488.064 93.1563H441.096C442.291 105.191 450.059 112.936 461.533 112.936C470.257 112.936 477.786 107.574 480.296 99.7099L486.63 102.57C483.045 112.936 472.886 119.966 461.413 119.966C444.323 119.966 432.969 107.932 432.969 90.1775C432.969 72.4233 444.203 60.5078 461.054 60.5078C477.189 60.5078 487.945 71.8276 487.945 88.8668V93.1563H488.064ZM441.096 87.6752H480.416C480.057 75.1639 472.767 67.1805 461.174 67.1805C449.82 67.1805 441.932 75.1639 441.096 87.6752Z" fill="black"></path>
+<path d="M576.626 111.267V118.535H572.204C566.587 118.535 563.121 115.08 562.763 109.956C558.58 116.033 551.289 119.846 542.087 119.846C530.016 119.846 522.128 113.531 522.128 103.522C522.128 95.5384 528.701 89.3423 539.099 87.7933L558.341 84.6953C561.089 84.2186 562.882 82.193 562.882 79.4524C562.882 72.184 556.906 66.822 548.54 66.822C539.577 66.822 532.645 72.184 531.689 79.5716L524.638 78.0226C526.43 67.0603 535.752 60.1493 548.54 60.1493C562.284 60.1493 570.889 67.8944 570.889 79.8099V107.692C570.889 109.837 572.204 111.148 574.236 111.148H576.626V111.267ZM562.763 94.8235V90.0572L541.37 93.3936C534.557 94.3468 530.135 98.3981 530.135 103.403C530.135 109.36 535.394 113.412 543.282 113.412C554.994 113.412 562.763 106.024 562.763 94.8235Z" fill="black"></path>
+<path d="M597.428 61.4609H589.54V118.536H597.428V61.4609Z" fill="black"></path>
+<path d="M510.416 112.935C510.416 116.391 508.025 118.655 504.44 118.655C500.855 118.655 498.464 116.391 498.464 112.935C498.464 109.48 500.855 107.096 504.44 107.096C508.025 107.096 510.416 109.48 510.416 112.935Z" fill="black"></path>
+<path d="M599.462 40.1316C599.462 43.5871 597.072 45.851 593.486 45.851C589.901 45.851 587.511 43.5871 587.511 40.1316C587.511 36.6761 589.901 34.293 593.486 34.293C597.072 34.293 599.462 36.6761 599.462 40.1316Z" fill="black"></path>
+</svg></span>
+        <h1 class="page-title">Treble pricing</h1>
+      </div>
+      <div class="lang-switch" id="langSwitch">
+        <button type="button" class="active" data-lang="en" onclick="setLanguage('en')">EN</button>
+        <button type="button" data-lang="es" onclick="setLanguage('es')">ES</button>
+        <button type="button" data-lang="pt" onclick="setLanguage('pt')">PT</button>
+      </div>
+    </div>
+
+    <!-- 1. Feature tier -->
+    <div class="section">
+      <div class="section-title"><span class="section-num">1</span> <span data-i18n="sectionFeatureTier">Feature Tier</span></div>
+      <div class="tiers-row" id="tiersRow">
+
+      <div class="tier-card starter selectable" data-tier="starter" onclick="selectTier('starter')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Starter</div>
+        <div class="bundled-line">$399<span class="per" data-i18n="perMo">/mo</span></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">5,000</span> <span data-i18n="conversationsIncluded">conversations included</span></div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">500</span> <span data-i18n="aiCreditsIncluded">AI Credits included</span></div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">15</span> <span data-i18n="agents">Agents</span></div>
+        </div>
+      </div>
+
+      <div class="tier-card pro selectable" data-tier="pro" onclick="selectTier('pro')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Pro</div>
+        <div class="bundled-line">$699<span class="per" data-i18n="perMo">/mo</span></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">10,000</span> <span data-i18n="conversationsIncluded">conversations included</span></div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">1,000</span> <span data-i18n="aiCreditsIncluded">AI Credits included</span></div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">30</span> <span data-i18n="agents">Agents</span></div>
+        </div>
+      </div>
+
+      <div class="tier-card advanced selectable" data-tier="advanced" onclick="selectTier('advanced')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Advanced</div>
+        <div class="bundled-line">$899<span class="per" data-i18n="perMo">/mo</span></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">15,000</span> <span data-i18n="conversationsIncluded">conversations included</span></div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">1,500</span> <span data-i18n="aiCreditsIncluded">AI Credits included</span></div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span class="num">&gt;30</span> <span data-i18n="agents">Agents</span></div>
+        </div>
+      </div>
+      <div class="tier-card enterprise selectable" data-tier="enterprise" onclick="selectTier('enterprise')">
+        <div class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="tname"><span class="swatch"></span>Enterprise</div>
+        <div class="bundled-line"><span data-i18n="fromPrefix">from</span> $5,000<span class="per" data-i18n="perMo">/mo</span></div>
+        <div class="feat-list">
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="dedicatedSla">Dedicated SLA</span></div>
+          <div class="feat-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="customAi">Custom AI</span></div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- 2. Conversations -->
+    <div class="section">
+      <div class="bucket-head">
+        <div class="section-title"><span class="section-num">2</span> <span data-i18n="sectionConversations">Conversations</span></div>
+        <div class="bucket-price" id="bucketPriceOut">$0.00/mo</div>
+      </div>
+      <div class="bucket-readout">
+        <span class="big" id="bucketConvosBig">0</span>
+        <span class="sub" id="bucketBreakdown"></span>
+      </div>
+      <div class="slider-block">
+        <input type="range" id="bucketSlider" min="0" max="12" step="1" value="0" oninput="onBucketChange()">
+        <div class="ticks" id="bucketTicks"></div>
+      </div>
+    </div>
+
+    <!-- 3. AI Credits -->
+    <div class="section">
+      <div class="bucket-head">
+        <div class="section-title">
+          <span class="section-num ai">3</span> <span data-i18n="sectionAiCredits">AI Credits</span>
+          <span class="ai-badge" data-i18n="enhancementBadge">Enhancement</span>
+        </div>
+        <div class="bucket-price ai" id="aiBucketPriceOut">$0.00/mo</div>
+      </div>
+      <div class="bucket-readout">
+        <span class="big" id="aiBucketConvosBig">0</span>
+        <span class="sub" id="aiBucketBreakdown"></span>
+      </div>
+      <div class="slider-block">
+        <input type="range" class="ai-slider" id="aiBucketSlider" min="0" max="17" step="1" value="0" oninput="onAiBucketChange()">
+        <div class="ticks" id="aiBucketTicks"></div>
+      </div>
+    </div>
+
+    <div class="interop-note" data-i18n="interopNote">Conversations and AI Credits are separate pools — neither covers overflow from the other.</div>
+
+    <!-- Total -->
+    <div class="total-box">
+      <div class="receipt-line">
+        <span data-i18n="sectionFeatureTier">Feature Tier</span>
+        <span id="lineTier">$0.00</span>
+      </div>
+      <div class="receipt-line">
+        <span><span data-i18n="sectionConversations">Conversations</span> <span class="line-sub" id="lineBucketConvos"></span></span>
+        <span id="lineBucket">$0.00</span>
+      </div>
+      <div class="receipt-line">
+        <span><span data-i18n="sectionAiCredits">AI Credits</span> <span class="line-sub" id="lineAiBucketConvos"></span></span>
+        <span id="lineAiBucket">$0.00</span>
+      </div>
+      <div class="receipt-divider"></div>
+      <div class="receipt-line receipt-total">
+        <span data-i18n="total">Total</span>
+        <span><span id="grandTotalOut">$0.00</span></span>
+        <span class="total-metafee" id="grandTotalMetaFee" onclick="toggleDrawer()"></span>
+      </div>
+      <div class="total-note" data-i18n="totalNote">Includes Onboarding and a Dedicated CSM</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Meta fees drawer -->
+<div class="backdrop" id="backdrop" onclick="toggleDrawer()"></div>
+<div class="drawer" id="metaDrawer">
+  <div class="drawer-handle" onclick="toggleDrawer()">
+    <span class="drawer-arrow" id="drawerArrow">&#9650;</span>
+    <span data-i18n="metaFeesHeader">Meta Fees</span>
+    <span class="drawer-summary">$<span id="metaFeeTabOut">0.00</span></span>
+  </div>
+  <div class="drawer-body">
+    <div id="metaRows"></div>
+    <button class="add-row" onclick="addRow()" data-i18n="addCountry">+ Add country</button>
+    <div class="drawer-subtotal"><span data-i18n="metaFeeSubtotal">Meta Fee subtotal:</span> <span id="metaFeeOut">$0.00</span></div>
+  </div>
+</div>
+
+<script>
+
+/* ============================================================================
+   I18N -- EN / ES / PT
+   Static text is marked with data-i18n="key" in the HTML and swapped via
+   applyStaticTranslations(). Dynamically-generated strings (built in JS,
+   e.g. "convs", "(+$X Meta Fee)", "Custom") pull from the same dictionary
+   through t(key) instead of hardcoding English -- see the functions that
+   build those strings for where t() is used.
+   ============================================================================ */
+const I18N = {
+  sectionFeatureTier:    { en: 'Feature Tier', es: 'Plan', pt: 'Plano' },
+  perMo:                 { en: '/mo', es: '/mes', pt: '/mês' },
+  conversationsIncluded: { en: 'conversations included', es: 'conversaciones incluidas', pt: 'conversas incluídas' },
+  aiCreditsIncluded:     { en: 'AI Credits included', es: 'Créditos de IA incluidos', pt: 'Créditos de IA incluídos' },
+  agents:                { en: 'Agents', es: 'Agentes', pt: 'Agentes' },
+  dedicatedSla:          { en: 'Dedicated SLA', es: 'SLA Dedicado', pt: 'SLA Dedicado' },
+  customAi:              { en: 'Custom AI', es: 'IA Personalizada', pt: 'IA Personalizada' },
+  fromPrefix:            { en: 'from', es: 'desde', pt: 'a partir de' },
+  sectionConversations:  { en: 'Conversations', es: 'Conversaciones', pt: 'Conversas' },
+  sectionAiCredits:      { en: 'AI Credits', es: 'Créditos de IA', pt: 'Créditos de IA' },
+  enhancementBadge:      { en: 'Enhancement', es: 'Mejora', pt: 'Aprimoramento' },
+  interopNote:           { en: 'Conversations and AI Credits are separate pools — neither covers overflow from the other.', es: 'Las Conversaciones y los Créditos de IA son grupos independientes — ninguno cubre el excedente del otro.', pt: 'Conversas e Créditos de IA são grupos separados — nenhum cobre o excedente do outro.' },
+  total:                 { en: 'Total', es: 'Total', pt: 'Total' },
+  totalNote:             { en: 'Includes Onboarding and a Dedicated CSM', es: 'Incluye Incorporación y un CSM Dedicado', pt: 'Inclui Onboarding e um CSM Dedicado' },
+  metaFeeWord:           { en: 'Meta Fee', es: 'Tarifa de Meta', pt: 'Taxa da Meta' },
+  metaFeesHeader:        { en: 'Meta Fees', es: 'Tarifas de Meta', pt: 'Taxas da Meta' },
+  addCountry:            { en: '+ Add country', es: '+ Agregar país', pt: '+ Adicionar país' },
+  metaFeeSubtotal:       { en: 'Meta Fee subtotal:', es: 'Subtotal de tarifa de Meta:', pt: 'Subtotal da taxa da Meta:' },
+  custom:                { en: 'Custom', es: 'Personalizado', pt: 'Personalizado' },
+  convsAbbrev:           { en: 'convs', es: 'convs', pt: 'convs' },
+  includedWord:          { en: 'included', es: 'incluidas', pt: 'incluídas' },
+  additionalWord:        { en: 'additional', es: 'adicionales', pt: 'adicionais' }
+};
+
+let currentLang = 'en';
+
+/** Look up the current-language string for a dictionary key (falls back to English). */
+function t(key){
+  const entry = I18N[key];
+  if(!entry) return key;
+  return entry[currentLang] || entry.en;
+}
+
+/** Swap every element marked data-i18n="key" to the current language. */
+function applyStaticTranslations(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.documentElement.lang = currentLang;
+}
+
+function setLanguage(lang){
+  currentLang = lang;
+  document.querySelectorAll('#langSwitch button').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+  applyStaticTranslations();
+  refreshIndicators();
+  onMetaChange(); // regenerates the "convs" row labels + Meta Fee word + Custom, in the new language
+}
+
+
+/* ============================================================================
+   FORMATTING HELPERS
+   ============================================================================ */
+const fmtInt   = n => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(n));
+const fmtMoney = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** 1500 -> "1.5k", 20000 -> "20k" (used for slider tick labels) */
+function fmtK(n){
+  if(n >= 1000){
+    const k = n / 1000;
+    return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+  }
+  return String(Math.round(n));
+}
+
+
+/* ============================================================================
+   PRICING DATA
+   ============================================================================ */
+
+// ---- Section 2: Bot & Agent conversation bucket ladder (13 steps) ----
+// Step 0 is a new "0 additional conversations" option -- the default, always $0.
+const BUCKETS = [0, 5000, 7000, 10000, 14000, 19500, 27000, 38000, 53000, 74000, 105000, 145000, 200000];
+// Prices for 5,000/7,000/10,000 are corrected here (see comment below) --
+// everything from 14,000 up is unchanged from Ops' original sheet.
+const BOT_COST_MAP = {
+  0: 0,
+  5000: 275,  // was $150 -- fitted to the 14k/19.5k per-convo trend (was cheaper than 7k, which is backwards)
+  7000: 375,  // was $225 -- same fix
+  10000: 515, // was $450 -- same fix
+  14000: 700,
+  19500: 950,
+  27000: 1200,
+  38000: 1550,
+  53000: 1900,
+  74000: 2300,
+  105000: 2800,
+  145000: 3350,
+  200000: 3950
+};
+// The 5,000/7,000/10,000 prices above were re-derived by fitting a power-law
+// volume-discount curve (rate = k * volume^-p) through the two well-behaved,
+// already-decreasing buckets closest to the anomaly (14,000 @ $0.0500/convo
+// and 19,500 @ $0.0487/convo), then extrapolating that same curve backward.
+// The old values (150/225/450) gave a LOWER per-conversation rate than 7,000
+// and 10,000 -- i.e. buying in smaller increments was cheaper than buying
+// more at once, which is backwards for a volume-discount model. The new
+// values keep the per-conversation rate strictly decreasing all the way
+// from 5,000 to 200,000: $0.0550 -> $0.0536 -> $0.0515 -> $0.0500 -> ...
+
+// ---- Section 3: AI Credits bucket ladder (18 steps) ----
+// Represents ADDITIONAL AI Credits on top of whatever the tier already
+// includes for free -- same shape as before, just relabeled: these numbers
+// are no longer "totals", they're the extra amount being added.
+const AI_STEPS = [0, 500, 750, 1000, 2000, 3000, 5000, 7000, 10000, 14000, 19500, 27000, 38000, 53000, 74000, 105000, 145000, 200000];
+
+// AI pricing constants -- ported from Ops' reference calculator (index.html).
+// AI_UNIT_COST includes infra cost (same convention as the Bot side) -- this
+// is what keeps the AI Credits price table matching the canonical bucket
+// prices exactly (500 -> $140 ... 200,000 -> $41,865).
+const AI_COST = 0.061;         // underlying per-credit cost (model/compute)
+const AI_INFRA_COST = 0.0018;  // infra cost per credit
+const AI_UNIT_COST = AI_COST + AI_INFRA_COST;
+const AI_MARGIN = 0.70;       // target margin at full volume (200,000)
+
+// ---- Feature tiers ----
+// Starter $399, Pro $699, Advanced $899 (set directly, not derived).
+const platformFees = { starter: 399, pro: 699, advanced: 899, enterprise: null };
+
+// Flat conversations included per tier -- matches the "X,000 conversations
+// included" line on each card. The Bot & Agent slider no longer represents
+// this total; it's purely ADDITIONAL volume on top of this included amount.
+const BOT_INCLUDED = { starter: 5000, pro: 10000, advanced: 15000 };
+
+// Flat AI Credits included per tier -- matches the "X AI Credits
+// included" line on each card. Same deal: the AI slider is purely additional
+// volume on top of this included amount (see aiCost() below).
+const AI_INCLUDED = { starter: 500, pro: 1000, advanced: 1500 };
+
+
+/* ============================================================================
+   PRICING LOGIC
+   Both sliders now represent ADDITIONAL conversations only -- whatever the
+   tier already includes for free is added on separately (in the receipt
+   line, not in the slider's own value). Bot pricing is still a flat lookup
+   on the additional amount; AI pricing still uses the volume-discount
+   formula, but now the entire slider value is billable (it's already
+   "additional" by definition) -- the tier's flat AI inclusion only affects
+   the volume used to calculate the per-conversation rate, not how much of
+   the slider gets charged.
+   ============================================================================ */
+
+function botCost(c){ return BOT_COST_MAP[c] ?? 0; }
+
+function roundToNearest5(v){ return Math.round(v / 5) * 5; }
+
+/** Per-conversation AI rate at a given total AI volume -- drops toward the margin floor as volume approaches 200,000. */
+function aiUnitPrice(aiConversations){
+  const floorPrice = AI_UNIT_COST / (1 - AI_MARGIN);
+  const volume = Math.max(1, Math.min(aiConversations, 200000));
+  const discountProgress = Math.sqrt(volume / 200000);
+  const lowVolumePremium = 0.35 * (1 - discountProgress);
+  return floorPrice * (1 + lowVolumePremium);
+}
+
+function currentBotIncluded(){
+  return selectedTier ? (BOT_INCLUDED[selectedTier] || 0) : 0;
+}
+
+function currentAiIncluded(){
+  return selectedTier ? (AI_INCLUDED[selectedTier] || 0) : 0;
+}
+
+/** AI charge for a selected ADDITIONAL volume c: the whole thing is billable, priced at the rate for (included + c) total volume. */
+function aiCost(c){
+  if(c <= 0) return 0;
+  const totalAiVolume = currentAiIncluded() + c;
+  return roundToNearest5(c * aiUnitPrice(totalAiVolume));
+}
+
+
+/* ============================================================================
+   APPLICATION STATE + TIER SELECTION
+   ============================================================================ */
+let selectedTier = null;    // 'starter' | 'pro' | 'advanced' | 'enterprise' | null
+let bucketIdx = 0;          // current index into BUCKETS (section 2) -- additional conversations, starts at 0
+let aiBucketIdx = 0;        // current index into AI_STEPS (section 3) -- additional conversations, starts at 0
+
+function selectTier(id){
+  selectedTier = id;
+  document.querySelectorAll('#tiersRow .tier-card.selectable').forEach(card=>{
+    card.classList.toggle('selected', card.dataset.tier === id);
+  });
+  syncBucket();   // included amount changed -- refresh the Bot line's total
+  syncAiBucket(); // included amount + rate volume changed -- refresh the AI line's total and price
+}
+
+
+/* ============================================================================
+   SLIDER RENDERING + SYNC
+   ============================================================================ */
+
+/** Render the tick marks (dash + k-formatted label) under a slider for the given ladder. */
+function buildTicks(elId, ladder){
+  const len = ladder.length;
+  const ticksEl = document.getElementById(elId);
+  let html = '';
+  ladder.forEach((value, i)=>{
+    const pct = len > 1 ? (i / (len - 1)) * 100 : 0;
+    const style = (pct >= 99.9) ? `left:100%; transform: translateX(-100%);` : `left:${pct}%`;
+    html += `<div class="tick" style="${style}"><div class="dash"></div><div class="tlabel">${fmtK(value)}</div></div>`;
+  });
+  ticksEl.innerHTML = html;
+}
+
+function onBucketChange(){ syncBucket(); }
+
+/** Bot & Agent slider -- its value is purely ADDITIONAL conversations on top of the tier's flat included amount. Free range: 0 to 200,000. */
+function syncBucket(){
+  const slider = document.getElementById('bucketSlider');
+  bucketIdx = parseInt(slider.value, 10);
+
+  const len = BUCKETS.length;
+  const pct = (bucketIdx / (len - 1)) * 100;
+  slider.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+
+  const additional = BUCKETS[bucketIdx];
+  const included = currentBotIncluded();
+  const total = included + additional;
+  const cost = botCost(additional);
+  document.getElementById('bucketPriceOut').textContent = '$' + fmtMoney(cost) + '/mo';
+  document.getElementById('lineBucketConvos').textContent =
+    '(' + fmtInt(total) + ' = ' + fmtInt(included) + ' + ' + fmtInt(additional) + ')';
+
+  updateGrandTotal();
+}
+
+function onAiBucketChange(){ syncAiBucket(); }
+
+/** AI Credits slider -- its value is purely ADDITIONAL AI Credits on top of the tier's flat included amount. Free range: 0 to 200,000. */
+function syncAiBucket(){
+  const slider = document.getElementById('aiBucketSlider');
+  aiBucketIdx = parseInt(slider.value, 10);
+
+  const len = AI_STEPS.length;
+  const pct = (aiBucketIdx / (len - 1)) * 100;
+  slider.style.background = `linear-gradient(to right, var(--ai-accent) ${pct}%, var(--border) ${pct}%)`;
+
+  const additional = AI_STEPS[aiBucketIdx];
+  const included = currentAiIncluded();
+  const total = included + additional;
+  const cost = aiCost(additional);
+  document.getElementById('aiBucketPriceOut').textContent = '$' + fmtMoney(cost) + '/mo';
+  document.getElementById('lineAiBucketConvos').textContent =
+    '(' + fmtInt(total) + ' = ' + fmtInt(included) + ' + ' + fmtInt(additional) + ')';
+
+  updateGrandTotal();
+}
+
+
+/* ============================================================================
+   TOTAL / RECEIPT CALCULATION
+   Adding a 4th line item? Add its <span> pair inside .total-box in the HTML,
+   compute its cost here, and fold it into the final grandTotalOut sum.
+   ============================================================================ */
+function updateGrandTotal(){
+  const bucketCost = botCost(BUCKETS[bucketIdx]);
+  const aiBucketCost = aiCost(AI_STEPS[aiBucketIdx]);
+
+  const metaFeeText = document.getElementById('metaFeeOut').textContent.replace(/[^0-9.]/g, '');
+  const metaFee = parseFloat(metaFeeText) || 0;
+  document.getElementById('grandTotalMetaFee').textContent = '(+$' + fmtMoney(metaFee) + ' ' + t('metaFeeWord') + ')';
+
+  document.getElementById('lineBucket').textContent = '$' + fmtMoney(bucketCost);
+  document.getElementById('lineAiBucket').textContent = '$' + fmtMoney(aiBucketCost);
+
+  if(selectedTier === 'enterprise'){
+    document.getElementById('lineTier').textContent = t('custom');
+    document.getElementById('grandTotalOut').textContent = t('custom');
+    return;
+  }
+
+  const tierFee = selectedTier ? platformFees[selectedTier] : 0;
+  document.getElementById('lineTier').textContent = '$' + fmtMoney(tierFee);
+  document.getElementById('grandTotalOut').textContent = '$' + fmtMoney(tierFee + bucketCost + aiBucketCost);
+}
+
+
+/* ============================================================================
+   META FEES -- DATA
+   Real per-conversation Meta rate card by market + message category.
+   "Service" conversations are currently free everywhere, so they're
+   always priced at $0 rather than looked up in this table.
+   ============================================================================ */
+const DEMO_RATES = {"Argentina": {"Marketing": 0.0618, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Brazil": {"Marketing": 0.0625, "Utility": 0.0068, "Authentication": 0.0068, "Authentication-International": null, "Service": null}, "Chile": {"Marketing": 0.0889, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Colombia": {"Marketing": 0.0125, "Utility": 0.0008, "Authentication": 0.0008, "Authentication-International": null, "Service": null}, "Egypt": {"Marketing": 0.0644, "Utility": 0.0036, "Authentication": 0.0036, "Authentication-International": 0.065, "Service": null}, "France": {"Marketing": 0.0859, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Germany": {"Marketing": 0.1365, "Utility": 0.055, "Authentication": 0.055, "Authentication-International": null, "Service": null}, "Hong Kong": {"Marketing": 0.0732, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Hungary": {"Marketing": 0.086, "Utility": 0.035, "Authentication": 0.035, "Authentication-International": null, "Service": null}, "India": {"Marketing": 0.0118, "Utility": 0.0014, "Authentication": 0.0014, "Authentication-International": 0.0304, "Service": null}, "Indonesia": {"Marketing": 0.0411, "Utility": 0.025, "Authentication": 0.025, "Authentication-International": 0.136, "Service": null}, "Israel": {"Marketing": 0.0353, "Utility": 0.0053, "Authentication": 0.0053, "Authentication-International": null, "Service": null}, "Italy": {"Marketing": 0.0795, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Malaysia": {"Marketing": 0.086, "Utility": 0.014, "Authentication": 0.014, "Authentication-International": 0.0418, "Service": null}, "Mexico": {"Marketing": 0.0305, "Utility": 0.0085, "Authentication": 0.0085, "Authentication-International": null, "Service": null}, "Netherlands": {"Marketing": 0.1597, "Utility": 0.05, "Authentication": 0.05, "Authentication-International": null, "Service": null}, "Nigeria": {"Marketing": 0.0516, "Utility": 0.0067, "Authentication": 0.0067, "Authentication-International": 0.075, "Service": null}, "Pakistan": {"Marketing": 0.0473, "Utility": 0.01, "Authentication": 0.01, "Authentication-International": 0.075, "Service": null}, "Peru": {"Marketing": 0.0703, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Poland": {"Marketing": 0.0366, "Utility": 0.0122, "Authentication": 0.0122, "Authentication-International": null, "Service": null}, "Qatar": {"Marketing": 0.0341, "Utility": 0.012, "Authentication": 0.012, "Authentication-International": null, "Service": null}, "Romania": {"Marketing": 0.086, "Utility": 0.029, "Authentication": 0.029, "Authentication-International": null, "Service": null}, "Russia": {"Marketing": 0.0802, "Utility": 0.04, "Authentication": 0.04, "Authentication-International": null, "Service": null}, "Saudi Arabia": {"Marketing": 0.0501, "Utility": 0.0107, "Authentication": 0.0107, "Authentication-International": 0.0598, "Service": null}, "Singapore": {"Marketing": 0.0732, "Utility": 0.016, "Authentication": 0.016, "Authentication-International": null, "Service": null}, "South Africa": {"Marketing": 0.0379, "Utility": 0.0076, "Authentication": 0.0076, "Authentication-International": 0.02, "Service": null}, "Spain": {"Marketing": 0.0707, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Turkey": {"Marketing": 0.0109, "Utility": 0.0009, "Authentication": 0.0009, "Authentication-International": null, "Service": null}, "United Arab Emirates": {"Marketing": 0.0499, "Utility": 0.0157, "Authentication": 0.0157, "Authentication-International": 0.051, "Service": null}, "United Kingdom": {"Marketing": 0.0635, "Utility": 0.022, "Authentication": 0.022, "Authentication-International": null, "Service": null}, "North America": {"Marketing": 0.025, "Utility": 0.0034, "Authentication": 0.0034, "Authentication-International": null, "Service": null}, "Rest of Africa": {"Marketing": 0.0225, "Utility": 0.004, "Authentication": 0.004, "Authentication-International": null, "Service": null}, "Rest of Asia Pacific": {"Marketing": 0.0732, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Central & Eastern Europe": {"Marketing": 0.086, "Utility": 0.0212, "Authentication": 0.0212, "Authentication-International": null, "Service": null}, "Rest of Latin America": {"Marketing": 0.074, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Middle East": {"Marketing": 0.0341, "Utility": 0.0091, "Authentication": 0.0091, "Authentication-International": null, "Service": null}, "Rest of Western Europe": {"Marketing": 0.0592, "Utility": 0.0171, "Authentication": 0.0171, "Authentication-International": null, "Service": null}, "Other": {"Marketing": 0.0604, "Utility": 0.0077, "Authentication": 0.0077, "Authentication-International": null, "Service": null}};
+const DEMO_COUNTRIES = Object.keys(DEMO_RATES);
+
+
+/* ============================================================================
+   META FEES -- ROW MANAGEMENT
+   Each row = a country + message category + conversation-volume slider.
+   ============================================================================ */
+let rowCounter = 0;
+
+function countryOptions(selected){
+  return DEMO_COUNTRIES.map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+/** Category list depends on the country -- Authentication-International only shows where the rate table has it. */
+function categoryOptions(country, selected){
+  const entry = DEMO_RATES[country] || {};
+  const cats = ['Marketing', 'Utility', 'Authentication'];
+  if(entry['Authentication-International'] != null) cats.push('Authentication-International');
+  cats.push('Service');
+  const current = cats.includes(selected) ? selected : cats[0];
+  return cats.map(c => `<option value="${c}"${c === current ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+function rateFor(country, category){
+  if(category === 'Service') return 0;
+  const entry = DEMO_RATES[country];
+  if(!entry) return 0;
+  const v = entry[category];
+  return v == null ? 0 : v;
+}
+
+function rowTemplate(rowId, country){
+  return `
+    <div class="meta-row" data-row-id="${rowId}">
+      <select class="country-select" onchange="onCountryChange(this)">${countryOptions(country)}</select>
+      <select class="category-select" onchange="onMetaChange()">${categoryOptions(country, 'Marketing')}</select>
+      <div class="row-slider-wrap">
+        <input type="range" class="conv-slider" min="0" max="100000" step="100" value="0" oninput="onMetaChange()">
+        <span class="row-value">0 convs</span>
+      </div>
+      <span class="row-price">$0.00</span>
+      <button class="row-remove" onclick="removeRow(this)">&times;</button>
+    </div>`;
+}
+
+function addRow(){
+  rowCounter++;
+  const country = DEMO_COUNTRIES[(rowCounter - 1) % DEMO_COUNTRIES.length];
+  document.getElementById('metaRows').insertAdjacentHTML('beforeend', rowTemplate(rowCounter, country));
+  onMetaChange();
+}
+
+function removeRow(btn){
+  btn.closest('.meta-row').remove();
+  onMetaChange();
+}
+
+function onCountryChange(selectEl){
+  const row = selectEl.closest('.meta-row');
+  const catSelect = row.querySelector('.category-select');
+  const currentCat = catSelect.value;
+  catSelect.innerHTML = categoryOptions(selectEl.value, currentCat);
+  onMetaChange();
+}
+
+/** Recompute every row's price + the running Meta subtotal, then refresh the main total. */
+function onMetaChange(){
+  let metaCost = 0;
+  document.querySelectorAll('#metaRows .meta-row').forEach(row=>{
+    const country = row.querySelector('.country-select').value;
+    const category = row.querySelector('.category-select').value;
+    const slider = row.querySelector('.conv-slider');
+    const val = parseInt(slider.value, 10);
+    const rate = rateFor(country, category);
+    const rowCost = val * rate;
+
+    row.querySelector('.row-value').textContent = fmtInt(val) + ' ' + t('convsAbbrev');
+    row.querySelector('.row-price').textContent = '$' + fmtMoney(rowCost);
+    metaCost += rowCost;
+  });
+
+  document.getElementById('metaFeeOut').textContent = '$' + fmtMoney(metaCost);
+  document.getElementById('metaFeeTabOut').textContent = fmtMoney(metaCost);
+  updateGrandTotal();
+}
+
+
+/* ============================================================================
+   META FEES -- DRAWER TOGGLE
+   ============================================================================ */
+function toggleDrawer(){
+  const drawer = document.getElementById('metaDrawer');
+  const open = drawer.classList.toggle('open');
+  document.getElementById('backdrop').classList.toggle('open', open);
+}
+
+
+/* ============================================================================
+   INIT
+   ============================================================================ */
+/* ---- Slider readouts + active tick (display only, no pricing changes) ---- */
+function refreshIndicators(){
+  const mirror = (srcId, bigId, subId, sliderId, accent) => {
+    const src = document.getElementById(srcId);
+    const big = document.getElementById(bigId);
+    const sub = document.getElementById(subId);
+    const slider = document.getElementById(sliderId);
+    if(!src || !big || !sub || !slider) return;
+    const m = (src.textContent || '').match(/^\((.+?) = (.+?) \+ (.+?)\)$/);
+    if(m){
+      big.textContent = m[1];
+      sub.textContent = m[2] + ' ' + t('includedWord') + ' + ' + m[3] + ' ' + t('additionalWord');
+    }
+    const idx = parseInt(slider.value, 10);
+    slider.parentElement.querySelectorAll('.tick').forEach((tick, i) => {
+      const active = i === idx;
+      tick.querySelector('.tlabel').style.color = active ? accent : '';
+      tick.querySelector('.tlabel').style.fontWeight = active ? '600' : '';
+      tick.querySelector('.dash').style.background = active ? accent : '';
+      tick.querySelector('.dash').style.height = active ? '9px' : '';
+    });
+  };
+  mirror('lineBucketConvos', 'bucketConvosBig', 'bucketBreakdown', 'bucketSlider', '#000');
+  mirror('lineAiBucketConvos', 'aiBucketConvosBig', 'aiBucketBreakdown', 'aiBucketSlider', '#7347FF');
+}
+
+(function(){
+  const oSync = syncBucket, oAiSync = syncAiBucket;
+  syncBucket   = function(){ oSync.apply(null, arguments); refreshIndicators(); };
+  syncAiBucket = function(){ oAiSync.apply(null, arguments); refreshIndicators(); };
+})();
+
+buildTicks('bucketTicks', BUCKETS);
+buildTicks('aiBucketTicks', AI_STEPS);
+applyStaticTranslations();
+selectTier('pro');
+refreshIndicators();
+
+
+</script>
+
+</body>
+</html>
