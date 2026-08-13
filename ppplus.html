@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treble Pricing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!--
+  ============================================================================
+  TREBLE PRICING -- build-up draft
+  ============================================================================
+  Different philosophy from the "type two numbers, get a black-box plan"
+  version: here the rep picks a Tier first (an explicit, visible choice),
+  then adds pieces on top one at a time. Every addition shows its own price
+  the moment it's added, and a running receipt at the bottom sums exactly
+  those visible lines -- nothing arrives without a labeled line explaining
+  where it came from.
+
+  Per standing instruction: no per-conversation or per-credit rate is shown
+  anywhere -- only flat tier and bucket prices.
+
+  Restyled to the Treble Design System: Work Sans only, black-first CTAs,
+  Gainsboro/White Smoke canvas, Medium Aqua Marine as the single selection
+  accent, Golden Rod for the one semantic warning, 16/12/999px radii,
+  hairline borders, Lucide icons, sentence case copy, no em-dashes.
+  ============================================================================
+-->
+
+<style>
+  :root{
+    /* Treble Design System tokens -- see colors_and_type.css for the full set.
+       Variable NAMES kept from the original build (--paper, --ink, --accent...)
+       so every existing rule below inherits the rebrand with no per-rule edits;
+       only the values now point at Treble's actual palette and type system. */
+    --paper: #F2F6F2;              /* white-smoke: canvas */
+    --ink: #000000;                /* black: primary text */
+    --ink-soft: rgba(0,0,0,.62);   /* fg-secondary */
+    --ink-faint: rgba(0,0,0,.42);  /* fg-tertiary */
+    --border: rgba(0,0,0,.08);     /* border-hairline */
+    --border-strong: rgba(0,0,0,.16);
+    --white: #FFFFFF;
+    --accent: #82C7BF;             /* medium aqua marine: the one selection accent */
+    --accent-dark: #3E7A72;        /* darkened for legible text on tint */
+    --accent-bright: #82C7BF;
+    --accent-pale: rgba(130,199,191,.16);
+    --warn-bg: rgba(250,181,46,.14);
+    --warn-border: rgba(250,181,46,.55);
+    --warn-ink: #7A5200;
+    --font-display: 'Work Sans', sans-serif;
+    --font-body: 'Work Sans', sans-serif;
+    --font-mono: 'Work Sans', sans-serif; /* numerals use tabular-nums, no mono family in this system */
+    --radius: 16px;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.06);
+    --shadow-2: 0 8px 24px rgba(0,0,0,.08);
+    --shadow-3: 0 24px 64px rgba(0,0,0,.14);
+    --ease: cubic-bezier(.2,.8,.2,1);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    background: var(--paper); font-family: var(--font-body); color: var(--ink);
+    -webkit-font-smoothing: antialiased; padding: 64px 20px 140px;
+  }
+  .stage{ max-width: 1000px; margin: 0 auto; }
+
+  /* ---------------------------------------------------------------- brand header */
+  .brand-header{
+    display: flex; align-items: center; gap: 9px; margin-bottom: 28px;
+  }
+  .brand-mark{ display: flex; color: var(--ink); }
+  .brand-word{ font-family: var(--font-body); font-weight: 600; font-size: 15px; color: var(--ink); }
+  .brand-divider{ width: 1px; height: 14px; background: var(--border-strong); }
+  .brand-context{ font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------------------------------------------------------------- language selector */
+  .lang-select{
+    display: flex; gap: 4px; margin-left: auto;
+  }
+  .lang-btn{
+    display: flex; align-items: center; gap: 6px; border: none; background: none;
+    padding: 5px 9px; border-radius: 999px; cursor: pointer; font-family: var(--font-body);
+    font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--ink-faint);
+    opacity: .55; transition: opacity .15s, background .15s, color .15s;
+  }
+  .lang-btn .flag{ display: inline-block; border-radius: 2px; flex-shrink: 0; }
+  .lang-btn:hover{ opacity: .85; }
+  .lang-btn.active{ opacity: 1; color: var(--ink); background: var(--white); box-shadow: var(--shadow-1); }
+
+
+
+  /* ---------------------------------------------------------------- value card */
+  .every-plan{
+    border-radius: 16px; padding: 22px 24px;
+    margin-bottom: 40px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px 20px;
+  }
+  .every-plan .ep-title{
+    grid-column: 1 / -1; font-family: var(--font-display); font-weight: 600; font-size: 16px;
+    color: var(--ink); margin-bottom: 4px;
+  }
+  .every-plan .ep-item{ display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--ink-soft); }
+  .every-plan .ep-item::before{
+    content: '\2713'; flex-shrink: 0; color: var(--ink-faint); font-size: 13px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------------------------------------------------------------- step headers */
+  .step-head{ display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .step-title{ font-family: var(--font-display); font-weight: 600; font-size: 19px; }
+  .step-sub{ font-size: 12.5px; color: var(--ink-soft); margin: 0 0 20px 0; }
+
+  .section{ margin-bottom: 30px; }
+
+  /* ---------------------------------------------------------------- two-column layout */
+  .layout{ display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; }
+  .col-left, .col-right{ min-width: 0; }
+
+  .customize-empty{
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    min-height: 220px; border: 1.5px dashed var(--border); border-radius: 16px;
+    font-size: 13px; color: var(--ink-faint); padding: 20px;
+    background: rgba(255,255,255,.4); opacity: .8;
+  }
+  .customize-empty.hide{ display: none; }
+
+  @media (max-width: 800px){
+    .layout{ grid-template-columns: 1fr; gap: 0; }
+    .col-right{ margin-top: 36px; }
+    .every-plan{ grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------------------------------------------------------------- tier cards */
+  .tier-cards{ display: flex; flex-direction: column; }
+  .tier-card{
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 16px;
+    padding: 14px 18px; margin-bottom: 10px; cursor: pointer; overflow: hidden;
+    max-height: 90px; opacity: 1;
+    transition: max-height .32s cubic-bezier(.4,0,.2,1), opacity .22s ease,
+      margin-bottom .32s cubic-bezier(.4,0,.2,1), padding .32s cubic-bezier(.4,0,.2,1),
+      border-color .15s, background .15s, box-shadow .15s;
+  }
+  .tier-card:hover{ border-color: var(--accent-bright); }
+  .tier-card.active{ border-color: var(--accent); background: var(--accent-pale); box-shadow: 0 0 0 3px rgba(130,199,191,.22); }
+
+  /* once a tier is picked, collapse the others to save vertical space --
+     clicking the selected tier expands the list back open to compare or switch */
+  .tier-cards.has-selection .tier-card:not(.active){
+    max-height: 0; opacity: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0;
+    pointer-events: none;
+  }
+  .tier-cards.has-selection.expanded .tier-card:not(.active){
+    max-height: 90px; opacity: .72; margin-bottom: 10px; padding-top: 14px; padding-bottom: 14px; border-width: 1.5px;
+    pointer-events: auto;
+  }
+  .tier-cards.has-selection.expanded .tier-card:not(.active):hover{ opacity: 1; }
+
+  .tier-card .t-right{ display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .tier-chev{
+    width: 12px; height: 12px; color: var(--accent-dark); transition: transform .25s ease; flex-shrink: 0; stroke-width: 1.75;
+  }
+  .tier-cards.expanded .tier-chev{ transform: rotate(180deg); }
+
+  .tier-card .t-left{ display: flex; flex-direction: column; gap: 4px; }
+  .tier-card .t-name{ font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--ink); }
+  .tier-card .t-includes{ font-size: 12px; color: var(--ink-soft); }
+  .tier-card .t-price{ font-family: var(--font-mono); font-weight: 600; font-size: 19px; color: var(--ink); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .tier-card .t-price .per{ font-size: 11px; font-weight: 500; color: var(--ink-faint); }
+  .tier-card:last-child{ margin-bottom: 0; }
+
+  /* ---------------------------------------------------------------- customize (revealed after tier pick) */
+  .customize-wrap{ display: none; }
+  .customize-wrap.show{ display: block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn{ from{ opacity: 0; transform: translateY(6px); } to{ opacity: 1; transform: translateY(0); } }
+
+  /* ---- collapsible line-items: closed by default, expand only what's needed ---- */
+  .line-item{
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 16px;
+    margin-bottom: 12px; overflow: hidden;
+    transition: border-color .2s, background .2s, opacity .2s;
+  }
+  .line-item.has-value{ border-color: var(--accent-bright); background: var(--accent-pale); }
+  .line-item:not(.has-value):not(.open){ opacity: .62; }
+  .line-item:not(.has-value):not(.open):hover{ opacity: 1; }
+  .line-header{
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; cursor: pointer;
+  }
+  .lh-left{ display: flex; flex-direction: column; gap: 3px; }
+  .lh-title-row{ display: flex; align-items: center; gap: 6px; }
+  .lh-title{ font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--ink); }
+  .info-btn{
+    width: 16px; height: 16px; border: none; background: none; color: var(--ink-faint);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0;
+  }
+  .info-btn svg{ width: 14px; height: 14px; stroke-width: 1.75; }
+  .info-btn:hover{ color: var(--ink); }
+  .lh-sub{ font-size: 11.5px; color: var(--ink-faint); }
+  .line-header-end{ display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .line-right{ display: flex; align-items: flex-end; flex-direction: column; gap: 1px; }
+  .add-qty{ font-size: 11.5px; font-weight: 600; color: var(--ink-faint); }
+  .line-item.has-value .add-qty{ color: var(--accent-dark); }
+  .add-price{ font-family: var(--font-mono); font-weight: 600; font-size: 13.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .line-item.has-value .add-price{ color: var(--accent-dark); }
+  .line-chev{ width: 12px; height: 12px; color: var(--ink-faint); transition: transform .2s; flex-shrink: 0; stroke-width: 1.75; }
+  .line-item.open .line-chev{ transform: rotate(180deg); }
+  .line-item.open .line-header{ border-bottom: 1px solid var(--border); }
+
+  .line-expand{
+    max-height: 0; opacity: 0; overflow: hidden; padding: 0 18px;
+    transition: max-height .3s cubic-bezier(.4,0,.2,1), opacity .22s ease, padding .3s cubic-bezier(.4,0,.2,1);
+  }
+  .line-item.open .line-expand{ max-height: 340px; opacity: 1; padding: 16px 18px 18px; }
+
+  /* ---------------------------------------------------------------- info modal */
+  .info-backdrop{
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 60;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  }
+  .info-backdrop.open{ opacity: 1; pointer-events: auto; }
+  .info-modal{
+    background: var(--white); border-radius: 16px; padding: 28px; max-width: 420px; width: 100%;
+    max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-3); position: relative;
+    transform: translateY(8px); transition: transform .2s ease;
+  }
+  .info-backdrop.open .info-modal{ transform: translateY(0); }
+  .info-close{
+    position: absolute; top: 16px; right: 16px; width: 26px; height: 26px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--white); color: var(--ink-faint);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .info-close svg{ width: 14px; height: 14px; stroke-width: 1.75; }
+  .info-close:hover{ color: var(--ink); }
+  .info-modal-title{ font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--ink); margin-bottom: 8px; padding-right: 28px; }
+  .info-modal-desc{ font-size: 12.5px; color: var(--ink-soft); line-height: 1.55; margin-bottom: 18px; }
+  .info-table{ width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .info-table th{
+    text-align: left; font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--ink-faint); padding: 6px 8px; border-bottom: 1.5px solid var(--border);
+  }
+  .info-table td{ padding: 8px; border-bottom: 1px solid var(--border); color: var(--ink-soft); }
+  .info-table tr.row-selected{ background: var(--accent-pale); }
+  .info-table tr.row-selected td{ color: var(--accent-dark); font-weight: 600; }
+
+  input[type="range"]{
+    width: 100%; height: 4px; border-radius: 999px; background: var(--border);
+    outline: none; -webkit-appearance: none; appearance: none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 3px 8px rgba(130,199,191,.45); cursor: pointer;
+  }
+  .ai-slider-label{ display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-faint); margin-top: 8px; }
+  .ai-slider-label .val{ font-family: var(--font-mono); font-weight: 600; color: var(--accent-dark); font-variant-numeric: tabular-nums; }
+
+  /* ---------------------------------------------------------------- total box (in-flow, full width) */
+  .total-box{
+    background: var(--white); border: 1.5px solid var(--border);
+    border-top: 4px solid var(--accent); border-radius: var(--radius);
+    margin: 30px 0 40px;
+  }
+  .sticky-inner{
+    padding: 26px 28px 28px;
+  }
+  .reco-alert{
+    display: none; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--warn-bg); border: 1.5px solid var(--warn-border); border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 14px; cursor: pointer; font-size: 12.5px; color: var(--warn-ink);
+    transition: background .15s;
+  }
+  .reco-alert.show{ display: flex; }
+  .reco-alert:hover{ background: rgba(250,181,46,.22); }
+  .reco-alert b{ font-family: var(--font-mono); font-weight: 600; }
+  .reco-arrow{ width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; color: var(--warn-ink); }
+
+  .recommend-modal{ max-width: 560px; }
+  .compare-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .compare-col{ border: 1.5px solid var(--border); border-radius: 16px; padding: 16px; }
+  .compare-col.recommended{ border-color: var(--accent); background: var(--accent-pale); }
+  .compare-label{
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--ink-faint); margin-bottom: 8px;
+  }
+  .compare-col.recommended .compare-label{ color: var(--accent-dark); }
+  .compare-tier{ font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 8px; }
+  .compare-line{ font-size: 11.5px; color: var(--ink-soft); margin-bottom: 3px; }
+  .compare-total{
+    font-family: var(--font-mono); font-weight: 600; font-size: 18px; color: var(--ink);
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border);
+  }
+  .compare-col.recommended .compare-total{ color: var(--accent-dark); }
+  .switch-btn{
+    width: 100%; font-family: var(--font-body); font-weight: 600; font-size: 14px; color: var(--white);
+    background: var(--ink); border: none; border-radius: 999px; padding: 13px; cursor: pointer;
+    transition: background var(--dur-small, 180ms) var(--ease);
+  }
+  .switch-btn:hover{ background: #1a1a1a; }
+  .switch-btn:active{ background: #262626; transform: translateY(1px); }
+  .switch-btn span{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  .sticky-summary{
+    font-size: 13px; color: var(--ink-soft); margin-bottom: 14px;
+    display: flex; flex-wrap: wrap; gap: 6px 18px;
+  }
+  .sticky-summary b{ font-family: var(--font-mono); font-weight: 600; color: var(--ink); }
+  .sticky-summary-divider{ height: 1px; background: var(--border); margin-bottom: 12px; }
+  .sticky-items{ display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .sticky-line + .sticky-line{ border-top: 1px solid rgba(0,0,0,.06); padding-top: 6px; }
+  .sticky-line{
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 12.5px; color: var(--ink-soft);
+  }
+  .sticky-line .amt{ font-family: var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+  .sticky-divider{ height: 1px; background: var(--border); margin: 10px 0 14px; }
+  .sticky-total-row{ display: flex; align-items: center; justify-content: space-between; }
+  .sticky-total-row .label{ font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--ink); }
+  .total-amt-wrap{ display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .total-amt-wrap .amt{ font-family: var(--font-mono); font-weight: 900; font-size: 28px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meta-note{ font-size: 11.5px; color: var(--ink-faint); cursor: pointer; display: inline-flex; align-items: baseline; gap: 3px; }
+  .meta-note:hover{ color: var(--accent-dark); text-decoration: underline; }
+  .meta-note #metaNoteAmt{ font-family: var(--font-mono); font-weight: 600; }
+
+  /* ---------------------------------------------------------------- Meta Fees drawer */
+  .backdrop{
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    opacity: 0; pointer-events: none; transition: opacity .3s ease; z-index: 40;
+  }
+  .backdrop.open{ opacity: 1; pointer-events: auto; }
+  .drawer{
+    position: fixed; left: 24px; right: 24px; bottom: 0; max-width: 960px; margin: 0 auto;
+    background: var(--white); border: 1.5px solid var(--border); border-bottom: none;
+    border-radius: 16px 16px 0 0; box-shadow: var(--shadow-3);
+    z-index: 50; max-height: 66vh; transform: translateY(100%); opacity: 0; pointer-events: none;
+    transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .2s ease;
+    display: flex; flex-direction: column;
+  }
+  .drawer.open{ transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .drawer-handle{
+    height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    gap: 9px; cursor: pointer; font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--ink);
+  }
+  .drawer-arrow{ width: 14px; height: 14px; stroke-width: 1.75; transition: transform .35s ease; color: var(--ink-faint); flex-shrink: 0; }
+  .drawer.open .drawer-arrow{ transform: rotate(180deg); }
+  .drawer-summary{ color: var(--accent-dark); }
+  .drawer-body{ overflow-y: auto; padding: 4px 26px 22px; border-top: 1px solid var(--border); }
+  .drawer-subtotal{
+    margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border);
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink);
+  }
+  .drawer-subtotal span{ color: var(--accent-dark); font-weight: 600; }
+  .meta-row{ display: flex; align-items: center; gap: 12px; padding: 10px 0; flex-wrap: nowrap; }
+  .meta-row + .meta-row{ border-top: 1px dashed var(--border); }
+  .country-select, .category-select{
+    flex: 0 0 150px; padding: 8px 9px; border: 1px solid var(--border-strong);
+    border-radius: 12px; font-size: 12px; font-family: var(--font-body); color: var(--ink); background: var(--white);
+  }
+  .row-slider-wrap{ flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; }
+  .row-slider-wrap input[type="range"]{
+    flex: 1; min-width: 0; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; background: var(--border); outline: none;
+  }
+  .row-slider-wrap input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 3px 8px rgba(130,199,191,.45); cursor: pointer;
+  }
+  .row-value{ font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink); min-width: 90px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .row-price{ font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; color: var(--accent-dark); min-width: 56px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .row-remove{
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--white); color: var(--ink-faint); cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .row-remove svg{ width: 12px; height: 12px; stroke-width: 1.75; }
+  .row-remove:hover{ background: var(--paper); color: var(--ink); }
+  .add-row{
+    margin-top: 10px; font-family: var(--font-body); font-weight: 500; font-size: 12px; color: var(--ink);
+    background: none; border: 1px solid var(--border-strong); padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    transition: background var(--dur-small, 180ms) var(--ease);
+  }
+  .add-row:hover{ background: rgba(0,0,0,.04); }
+
+  @media (max-width: 480px){
+    .every-plan{ grid-template-columns: 1fr; }
+    .tier-card{ flex-direction: column; align-items: flex-start; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ============================== BRAND HEADER ============================== -->
+  <div class="brand-header">
+    <div class="brand-mark">
+      <svg viewBox="0 0 154 154" width="18" height="18" fill="none" aria-hidden="true">
+        <path d="M127.999 95.8022C124.283 95.8022 120.808 97.4674 118.531 99.9651L86.2909 82.2429C86.171 82.1239 86.0512 82.1239 85.9313 82.005C84.1336 81.0535 81.9763 80.4587 79.819 80.4587C78.7403 80.4587 77.6617 80.5777 76.583 80.8156C75.5044 81.0535 74.4257 81.5292 73.3471 82.1239C69.5118 84.3838 66.8751 88.4278 66.8751 93.1855V127.916C63.3995 128.749 60.5231 131.009 58.8452 134.101C57.7665 135.885 57.2871 138.026 57.2871 140.286C57.2871 147.304 63.0399 153.013 70.1111 153.013C77.1823 153.013 82.9351 147.304 82.9351 140.286C82.9351 138.026 82.3358 135.885 81.2572 134.101C79.5793 131.128 76.7029 128.868 73.2272 127.916V92.9476C73.2272 89.3793 76.1036 86.5248 79.6991 86.5248C80.7778 86.5248 81.8564 86.7626 82.8152 87.2384L92.643 92.5908L115.534 105.318C115.295 106.388 115.175 107.458 115.175 108.529C115.175 110.789 115.774 112.93 116.853 114.714C119.01 118.639 123.205 121.256 128.119 121.256C135.19 121.256 140.943 115.546 140.943 108.529C140.823 101.511 135.07 95.8022 127.999 95.8022ZM75.7441 137.313C76.2235 138.264 76.583 139.335 76.583 140.405C76.583 143.973 73.7066 146.828 70.1111 146.828C66.5156 146.828 63.6392 143.973 63.6392 140.405C63.6392 139.335 63.8789 138.264 64.4781 137.313C65.5568 135.41 67.7141 133.982 70.1111 133.982C72.6279 133.982 74.6654 135.41 75.7441 137.313ZM127.999 114.952C125.602 114.952 123.564 113.643 122.366 111.74C121.886 110.789 121.527 109.718 121.527 108.648C121.527 108.529 121.527 108.41 121.527 108.291C121.647 106.269 122.725 104.604 124.164 103.533C125.242 102.82 126.561 102.344 127.879 102.344C131.474 102.344 134.351 105.199 134.351 108.767C134.351 112.097 131.474 114.952 127.999 114.952Z" fill="currentColor"/>
+        <path d="M140.824 44.7758C140.824 37.7582 135.071 32.049 128 32.049C123.206 32.049 119.011 34.6657 116.734 38.5908C115.655 40.3749 115.056 42.5159 115.056 44.7758C115.056 45.8462 115.176 46.9167 115.416 47.9872L92.6442 60.595L82.8165 65.9474C81.9775 66.4231 80.8989 66.7799 79.8202 66.7799C76.2247 66.7799 73.3483 63.9253 73.3483 60.3571V25.2694C76.824 24.4368 79.7004 22.1769 81.3783 19.0844C82.4569 17.3003 83.0562 15.1594 83.0562 12.8995C83.0562 5.88192 77.3034 0.172729 70.2322 0.172729C63.161 0.172729 57.4082 5.88192 57.4082 12.8995C57.4082 15.1594 58.0075 17.3003 58.9663 19.0844C60.6442 22.058 63.5206 24.3178 66.9962 25.2694V60.0003C66.9962 64.7579 69.6329 68.8019 73.4681 71.0618C74.4269 71.6565 75.5056 72.0134 76.7041 72.3702C77.7828 72.6081 78.8614 72.727 79.9401 72.727C82.0974 72.727 84.2547 72.1323 86.0524 71.1808C86.1723 71.0618 86.2921 71.0618 86.412 70.9429L118.532 53.2206C120.929 55.8373 124.285 57.3836 128 57.3836C135.071 57.6214 140.824 51.7933 140.824 44.7758ZM70.2322 19.3223C67.8352 19.3223 65.6779 18.0139 64.5992 15.9919C64.1198 15.0404 63.7603 13.9699 63.7603 12.8995C63.7603 9.33122 66.6367 6.47663 70.2322 6.47663C73.8277 6.47663 76.7041 9.33122 76.7041 12.8995C76.7041 13.9699 76.4644 15.0404 75.8652 15.9919C74.6667 18.0139 72.6292 19.3223 70.2322 19.3223ZM134.352 44.7758C134.352 48.344 131.476 51.1986 127.88 51.1986C126.442 51.1986 125.243 50.7228 124.165 50.0092C122.607 48.9387 121.648 47.1546 121.528 45.2515C121.528 45.1326 121.528 45.0137 121.528 44.8947C121.528 43.7053 121.768 42.6348 122.367 41.8022C123.446 39.8992 125.603 38.5908 128 38.5908C131.476 38.4719 134.352 41.3265 134.352 44.7758Z" fill="currentColor"/>
+        <path d="M6.95203 31.5736C0.839661 35.0229 -1.31765 42.873 2.15801 48.939C4.55502 53.102 8.98948 55.3619 13.4239 55.3619C15.5812 55.3619 17.7386 54.7672 19.6562 53.6967C20.615 53.102 21.4539 52.5073 22.2929 51.7936L44.7049 65.234L54.2929 70.9432C55.1319 71.5379 55.9708 72.2515 56.4502 73.2031C58.248 76.2956 57.1693 80.2206 54.0532 81.8858L23.3715 99.3702C20.8547 96.8724 17.4989 95.4451 14.0232 95.5641C11.8659 95.5641 9.82843 96.1588 7.79098 97.2292C1.67861 100.679 -0.478693 108.529 2.99697 114.595C6.47263 120.661 14.3827 122.802 20.4951 119.352C22.4127 118.282 23.9708 116.736 25.1693 114.833C26.967 111.859 27.5663 108.291 26.6075 104.841L57.0495 87.595C61.1244 85.2162 63.5214 80.9343 63.5214 76.5334C63.5214 75.344 63.4015 74.2736 63.042 73.2031C62.8023 72.1326 62.3229 71.1811 61.8435 70.2295C60.7648 68.3265 59.2068 66.7802 57.409 65.7098C57.2892 65.5908 57.1693 65.5908 57.0495 65.4719L25.5288 46.5602C26.6075 43.2298 26.3678 39.5427 24.4502 36.3312C20.9745 30.1463 13.1842 28.0053 6.95203 31.5736ZM19.776 105.079C20.9745 107.22 20.8547 109.599 19.6562 111.502C19.0569 112.454 18.3378 113.167 17.379 113.762C14.2629 115.546 10.4277 114.476 8.62993 111.383C6.83218 108.291 7.91083 104.485 11.0269 102.701C11.9857 102.106 13.0644 101.868 14.143 101.868C16.3004 101.868 18.5775 102.938 19.776 105.079ZM10.188 37.0449C13.3041 35.2608 17.1393 36.3312 18.9371 39.4237C19.6562 40.6131 19.8959 41.9215 19.776 43.2298C19.5363 45.1329 18.5775 46.7981 16.8996 47.8685C16.7798 47.9875 16.6599 47.9875 16.5401 48.1064C15.5812 48.7011 14.5026 48.939 13.4239 48.939C11.1468 48.939 8.98948 47.7496 7.79098 45.7276C5.99322 42.7541 7.07188 38.829 10.188 37.0449Z" fill="currentColor"/>
+      </svg>
+    </div>
+    <span class="brand-word">Treble</span>
+    <span class="brand-divider"></span>
+    <span class="brand-context">Pricing builder</span>
+
+    <!-- ============================== LANGUAGE SELECTOR ============================== -->
+    <div class="lang-select" id="langSelect">
+      <button class="lang-btn" data-lang="es" onclick="setLang('es')">
+        <svg class="flag" viewBox="0 0 20 14" width="16" height="11"><clipPath id="flagClipEs"><rect width="20" height="14" rx="2"/></clipPath><g clip-path="url(#flagClipEs)"><rect width="20" height="14" fill="#FCD116"/><rect y="7" width="20" height="3.5" fill="#003893"/><rect y="10.5" width="20" height="3.5" fill="#CE1126"/></g></svg>
+        ES
+      </button>
+      <button class="lang-btn" data-lang="pt" onclick="setLang('pt')">
+        <svg class="flag" viewBox="0 0 20 14" width="16" height="11"><clipPath id="flagClipPt"><rect width="20" height="14" rx="2"/></clipPath><g clip-path="url(#flagClipPt)"><rect width="20" height="14" fill="#009739"/><polygon points="10,2.2 17,7 10,11.8 3,7" fill="#FEDD00"/><circle cx="10" cy="7" r="2.6" fill="#002776"/></g></svg>
+        PT
+      </button>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">
+        <svg class="flag" viewBox="0 0 20 14" width="16" height="11"><clipPath id="flagClipEn"><rect width="20" height="14" rx="2"/></clipPath><g clip-path="url(#flagClipEn)"><rect width="20" height="14" fill="#fff"/><g fill="#B22234"><rect y="0" width="20" height="1.08"/><rect y="2.15" width="20" height="1.08"/><rect y="4.3" width="20" height="1.08"/><rect y="6.45" width="20" height="1.08"/><rect y="8.6" width="20" height="1.08"/><rect y="10.75" width="20" height="1.08"/><rect y="12.9" width="20" height="1.08"/></g><rect width="8.5" height="7.5" fill="#3C3B6E"/></g></svg>
+        EN
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================== VALUE CARD ============================== -->
+  <div class="every-plan" id="everyPlanNote"></div>
+
+  <div class="layout">
+    <!-- ============================== STEP 1: TIER ============================== -->
+    <div class="col-left">
+      <div class="step-head"><span class="step-title" id="stepTitleSelect">Select your plan</span></div>
+      <div class="tier-cards" id="tierCards"></div>
+    </div>
+
+    <!-- ============================== STEP 2: CUSTOMIZE ============================== -->
+    <div class="col-right">
+      <div class="step-head"><span class="step-title" id="stepTitleCustomize">Customize your plan</span></div>
+
+      <div class="customize-empty" id="customizeEmpty"></div>
+
+      <div class="customize-wrap" id="customizeWrap">
+        <div class="line-item" id="lineitem-convo">
+          <div class="line-header" onclick="toggleLine('convo')">
+            <div class="lh-left">
+              <span class="lh-title-row"><span class="lh-title" id="lhTitleConvo">Additional conversations</span><button class="info-btn" type="button" onclick="event.stopPropagation(); openInfoModal('convo')"><i data-lucide="info"></i></button></span>
+              <span class="lh-sub" id="convoBaseline"></span>
+            </div>
+            <span class="line-header-end">
+              <span class="line-right"><span class="add-qty" id="addConvoQty"></span><span class="add-price" id="addConvoPrice"></span></span>
+              <i data-lucide="chevron-down" class="line-chev"></i>
+            </span>
+          </div>
+          <div class="line-expand">
+            <input type="range" id="convoSlider" min="0" max="200000" step="1000" value="0" oninput="onConvoSliderInput()">
+            <div class="ai-slider-label"><span id="lhTitleConvoSlider">Additional conversations</span><span class="val" id="convoSliderVal">0</span></div>
+          </div>
+        </div>
+
+        <div class="line-item" id="lineitem-ai">
+          <div class="line-header" onclick="toggleLine('ai')">
+            <div class="lh-left">
+              <span class="lh-title-row"><span class="lh-title" id="lhTitleAi">Additional AI credits</span><button class="info-btn" type="button" onclick="event.stopPropagation(); openInfoModal('ai')"><i data-lucide="info"></i></button></span>
+              <span class="lh-sub" id="aiBaseline"></span>
+            </div>
+            <span class="line-header-end">
+              <span class="line-right"><span class="add-qty" id="addAiQty"></span><span class="add-price" id="addAiPrice"></span></span>
+              <i data-lucide="chevron-down" class="line-chev"></i>
+            </span>
+          </div>
+          <div class="line-expand">
+            <input type="range" id="aiSlider" min="0" max="17" step="1" value="0" oninput="onAiSliderInput()">
+            <div class="ai-slider-label"><span id="lhTitleAiSlider">Additional AI credits</span><span class="val" id="aiSliderVal">0</span></div>
+          </div>
+        </div>
+
+        <div class="line-item" id="lineitem-agents">
+          <div class="line-header" onclick="toggleLine('agents')">
+            <div class="lh-left">
+              <span class="lh-title-row"><span class="lh-title" id="lhTitleAgents">Additional human agents</span><button class="info-btn" type="button" onclick="event.stopPropagation(); openInfoModal('agents')"><i data-lucide="info"></i></button></span>
+              <span class="lh-sub" id="agentsBaseline"></span>
+            </div>
+            <span class="line-header-end">
+              <span class="line-right"><span class="add-qty" id="addAgentsQty"></span><span class="add-price" id="addAgentsPrice"></span></span>
+              <i data-lucide="chevron-down" class="line-chev"></i>
+            </span>
+          </div>
+          <div class="line-expand">
+            <input type="range" id="agentsSlider" min="0" max="100" step="1" value="0" oninput="onAgentsSliderInput()">
+            <div class="ai-slider-label"><span id="lhTitleAgentsSlider">Additional human agents</span><span class="val" id="agentsSliderVal">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== TOTAL ============================== -->
+  <div class="total-box" id="stickyTotal">
+    <div class="sticky-inner">
+      <div class="reco-alert" id="recoAlert" onclick="openRecommendModal()">
+        <span id="recoAlertText"></span>
+        <i data-lucide="chevron-right" class="reco-arrow"></i>
+      </div>
+      <div class="sticky-summary" id="stickySummary"></div>
+      <div class="sticky-summary-divider"></div>
+      <div class="sticky-items" id="stickyItems">
+        <div class="sticky-line" id="stickyTierLine">
+          <span id="stickyTierLabel">Tier</span>
+          <span class="amt" id="stickyTierPrice"></span>
+        </div>
+        <div class="sticky-line" id="stickyConvoLine">
+          <span id="stickyConvoLabel">Additional conversations</span>
+          <span class="amt" id="stickyConvoPrice"></span>
+        </div>
+        <div class="sticky-line" id="stickyAiLine">
+          <span id="stickyAiLabel">Additional AI credits</span>
+          <span class="amt" id="stickyAiPrice"></span>
+        </div>
+        <div class="sticky-line" id="stickyAgentsLine">
+          <span id="stickyAgentsLabel">Additional human agents</span>
+          <span class="amt" id="stickyAgentsPrice"></span>
+        </div>
+      </div>
+      <div class="sticky-divider"></div>
+      <div class="sticky-total-row">
+        <span class="label" id="totalLabel">Total</span>
+        <div class="total-amt-wrap">
+          <span class="amt" id="totalOut"></span>
+          <div class="meta-note" onclick="toggleDrawer()">+ <span id="metaNoteAmt">$0</span> <span id="metaNoteLabel">Meta fees</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================== INFO MODAL ============================== -->
+<div class="info-backdrop" id="infoModalBackdrop" onclick="closeInfoModal()">
+  <div class="info-modal" onclick="event.stopPropagation()">
+    <button class="info-close" onclick="closeInfoModal()"><i data-lucide="x"></i></button>
+    <div class="info-modal-title" id="infoModalTitle"></div>
+    <div class="info-modal-desc" id="infoModalDesc"></div>
+    <table class="info-table">
+      <thead><tr><th id="infoAmountHeader">Amount</th><th id="infoPriceHeader">Price</th></tr></thead>
+      <tbody id="infoModalTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== RECOMMENDATION COMPARISON MODAL ============================== -->
+<div class="info-backdrop" id="recommendBackdrop" onclick="closeRecommendModal()">
+  <div class="info-modal recommend-modal" onclick="event.stopPropagation()">
+    <button class="info-close" onclick="closeRecommendModal()"><i data-lucide="x"></i></button>
+    <div class="info-modal-title" id="recommendModalTitle">A cheaper way to get this</div>
+    <div class="info-modal-desc" id="recommendModalDesc">Same conversations, AI credits, and human agents &mdash; for less.</div>
+    <div class="compare-grid">
+      <div class="compare-col">
+        <div class="compare-label" id="compareCurrentLabel">Current</div>
+        <div class="compare-tier" id="cmpCurrentTier"></div>
+        <div class="compare-line" id="cmpCurrentConvo"></div>
+        <div class="compare-line" id="cmpCurrentAi"></div>
+        <div class="compare-line" id="cmpCurrentAgents"></div>
+        <div class="compare-total" id="cmpCurrentTotal"></div>
+      </div>
+      <div class="compare-col recommended">
+        <div class="compare-label" id="compareRecommendedLabel">Recommended</div>
+        <div class="compare-tier" id="cmpNewTier"></div>
+        <div class="compare-line" id="cmpNewConvo"></div>
+        <div class="compare-line" id="cmpNewAi"></div>
+        <div class="compare-line" id="cmpNewAgents"></div>
+        <div class="compare-total" id="cmpNewTotal"></div>
+      </div>
+    </div>
+    <button class="switch-btn" onclick="applyRecommendation()"><span id="switchBtnText">Switch to this plan &mdash; save </span><span id="switchSavings"></span>/mo</button>
+  </div>
+</div>
+
+<!-- ============================== META FEES DRAWER ============================== -->
+<div class="backdrop" id="backdrop" onclick="toggleDrawer()"></div>
+<div class="drawer" id="metaDrawer">
+  <div class="drawer-handle" onclick="toggleDrawer()">
+    <i class="drawer-arrow" id="drawerArrow" data-lucide="chevron-up"></i>
+    <span id="drawerTitle">Meta pass-through fees</span>
+    <span class="drawer-summary">$<span id="metaFeeTabOut">0.00</span></span>
+  </div>
+  <div class="drawer-body">
+    <div id="metaRows"></div>
+    <button class="add-row" onclick="addRow()" id="addMarketBtn">+ Add market</button>
+    <div class="drawer-subtotal"><span id="metaSubtotalLabel">Meta subtotal: </span><span id="metaFeeOut">$0.00</span></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   DATA -- flat tier and bucket prices only.
+   ============================================================================ */
+const TIERS = [
+  { id: 't1', label: 'T1', convos: 5000,   price: 399,  aiCredits: 300,   agents: 10 },
+  { id: 't2', label: 'T2', convos: 15000,  price: 799,  aiCredits: 1500,  agents: 20 },
+  { id: 't3', label: 'T3', convos: 45000,  price: 1599, aiCredits: 4500,  agents: 30 },
+  { id: 't4', label: 'T4', convos: 120000, price: 3499, aiCredits: 12000, agents: 60 },
+  { id: 't5', label: 'T5', convos: 180000, price: 4999, aiCredits: 18000, agents: 80 }
+];
+
+const CONVO_BUCKETS = [
+  { size: 1000,  price: 79 },
+  { size: 5000,  price: 359 },
+  { size: 10000, price: 649 },
+  { size: 20000, price: 1159 },
+  { size: 50000, price: 2749 }
+];
+
+const AI_STEPS = [0, 500, 750, 1000, 2000, 3000, 5000, 7000, 10000, 14000, 19500, 27000, 38000, 53000, 74000, 105000, 145000, 200000];
+const AI_PRICE = { 0:0, 500:140, 750:210, 1000:275, 2000:550, 3000:820, 5000:1355, 7000:1880, 10000:2660, 14000:3685, 19500:5065, 27000:6905, 38000:9525, 53000:12980, 74000:17615, 105000:24100, 145000:31930, 200000:41865 };
+const AGENT_PRICE = 50;
+
+// Single mutable state object instead of scattered globals -- everything
+// the calculator needs to remember between renders lives here.
+const state = {
+  lang: 'en',
+  selectedTierId: null,
+  convoAdded: 0,   // additional conversations chosen on the slider; buckets are derived, not manually picked
+  aiIdx: 0,
+  agentsQty: 0,
+  metaCost: 0,
+  rowCounter: 0,
+  pendingRecommendation: null
+};
+
+const $ = id => document.getElementById(id);
+
+function fmtInt(n){ return Math.round(n).toLocaleString('en-US'); }
+function fmtMoney(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
+
+/* ============================================================================
+   TRANSLATIONS -- EN / ES / PT. Country and Meta conversation-category names
+   (Marketing, Utility, Authentication...) are official WhatsApp billing terms
+   and are intentionally left untranslated in all three languages.
+   ============================================================================ */
+const I18N = {
+  en: {
+    stepSelectPlan: 'Select your plan',
+    stepCustomizePlan: 'Customize your plan',
+    customizeEmptyText: 'Pick a tier on the left to start customizing.',
+    lineConvoTitle: 'Additional conversations',
+    lineAiTitle: 'Additional AI credits',
+    lineAgentsTitle: 'Additional human agents',
+    perAgentEachSuffix: ' \u00b7 $50 each',
+    noneAdded: 'None added',
+    unitConvos: 'conversations',
+    unitAi: 'AI credits',
+    unitAgents: 'human agents',
+    perMonth: '/mo',
+    tierDefaultLabel: 'Tier',
+    selectTierToStart: 'Select a tier to get started',
+    totalLabel: 'Total',
+    metaFeesLabel: 'Meta fees',
+    recoPrefix: 'There\u2019s a cheaper way to get this, save ',
+    recommendModalTitle: 'A cheaper way to get this',
+    recommendModalDesc: 'Same conversations, AI credits, and human agents, for less.',
+    compareCurrent: 'Current',
+    compareRecommended: 'Recommended',
+    switchBtnPrefix: 'Switch to this plan, save ',
+    noAddConvo: 'No additional conversations',
+    noAddAi: 'No additional AI credits',
+    noAddAgents: 'No additional human agents',
+    infoAmountHeader: 'Amount',
+    infoPriceHeader: 'Price',
+    everyPlanIncludes: 'Every plan includes',
+    drawerTitle: 'Meta pass-through fees',
+    addMarketBtn: '+ Add market',
+    metaSubtotalLabel: 'Meta subtotal: ',
+    convsAbbrev: 'convs',
+    infoConvoTitle: 'Additional Conversations',
+    infoAiTitle: 'Additional AI Credits',
+    infoAiDesc: '1 AI Credit = 1 AI-enhanced conversation.',
+    infoAgentsTitle: 'Additional Human Agents',
+    infoAgentsDesc: 'Each additional human agent seat is a flat $50/mo.',
+    agentSingular: 'agent',
+    agentPlural: 'agents',
+    staticIncludes: [
+      'Unlimited AI agents', 'All Treble features', 'Unlimited onboarding',
+      'Dedicated account manager', 'Enterprise-grade infrastructure',
+      'Salesforce integration', 'Hubspot integration', 'Google Sheets integration'
+    ]
+  },
+  es: {
+    stepSelectPlan: 'Selecciona tu plan',
+    stepCustomizePlan: 'Personaliza tu plan',
+    customizeEmptyText: 'Elige un plan a la izquierda para empezar a personalizar.',
+    lineConvoTitle: 'Conversaciones adicionales',
+    lineAiTitle: 'Cr\u00e9ditos de IA adicionales',
+    lineAgentsTitle: 'Agentes humanos adicionales',
+    perAgentEachSuffix: ' \u00b7 $50 cada uno',
+    noneAdded: 'Nada a\u00f1adido',
+    unitConvos: 'conversaciones',
+    unitAi: 'cr\u00e9ditos de IA',
+    unitAgents: 'agentes humanos',
+    perMonth: '/mes',
+    tierDefaultLabel: 'Plan',
+    selectTierToStart: 'Elige un plan para comenzar',
+    totalLabel: 'Total',
+    metaFeesLabel: 'tarifas de Meta',
+    recoPrefix: 'Hay una forma m\u00e1s econ\u00f3mica de obtener esto, ahorra ',
+    recommendModalTitle: 'Una forma m\u00e1s econ\u00f3mica de obtener esto',
+    recommendModalDesc: 'Las mismas conversaciones, cr\u00e9ditos de IA y agentes humanos, por menos.',
+    compareCurrent: 'Actual',
+    compareRecommended: 'Recomendado',
+    switchBtnPrefix: 'Cambiar a este plan, ahorra ',
+    noAddConvo: 'Sin conversaciones adicionales',
+    noAddAi: 'Sin cr\u00e9ditos de IA adicionales',
+    noAddAgents: 'Sin agentes humanos adicionales',
+    infoAmountHeader: 'Cantidad',
+    infoPriceHeader: 'Precio',
+    everyPlanIncludes: 'Todos los planes incluyen',
+    drawerTitle: 'Tarifas de transferencia de Meta',
+    addMarketBtn: '+ Agregar mercado',
+    metaSubtotalLabel: 'Subtotal de Meta: ',
+    convsAbbrev: 'convs',
+    infoConvoTitle: 'Conversaciones Adicionales',
+    infoAiTitle: 'Cr\u00e9ditos de IA Adicionales',
+    infoAiDesc: '1 Cr\u00e9dito de IA = 1 conversaci\u00f3n mejorada con IA.',
+    infoAgentsTitle: 'Agentes Humanos Adicionales',
+    infoAgentsDesc: 'Cada asiento de agente humano adicional cuesta $50/mes fijos.',
+    agentSingular: 'agente',
+    agentPlural: 'agentes',
+    staticIncludes: [
+      'Agentes de IA ilimitados', 'Todas las funciones de Treble', 'Onboarding ilimitado',
+      'Gerente de cuenta dedicado', 'Infraestructura de nivel empresarial',
+      'Integraci\u00f3n con Salesforce', 'Integraci\u00f3n con Hubspot', 'Integraci\u00f3n con Google Sheets'
+    ]
+  },
+  pt: {
+    stepSelectPlan: 'Selecione seu plano',
+    stepCustomizePlan: 'Personalize seu plano',
+    customizeEmptyText: 'Escolha um plano \u00e0 esquerda para come\u00e7ar a personalizar.',
+    lineConvoTitle: 'Conversas adicionais',
+    lineAiTitle: 'Cr\u00e9ditos de IA adicionais',
+    lineAgentsTitle: 'Agentes humanos adicionais',
+    perAgentEachSuffix: ' \u00b7 $50 cada um',
+    noneAdded: 'Nenhum adicionado',
+    unitConvos: 'conversas',
+    unitAi: 'cr\u00e9ditos de IA',
+    unitAgents: 'agentes humanos',
+    perMonth: '/m\u00eas',
+    tierDefaultLabel: 'Plano',
+    selectTierToStart: 'Selecione um plano para começar',
+    totalLabel: 'Total',
+    metaFeesLabel: 'taxas da Meta',
+    recoPrefix: 'H\u00e1 uma forma mais econ\u00f4mica de conseguir isso, economize ',
+    recommendModalTitle: 'Uma forma mais econ\u00f4mica de conseguir isso',
+    recommendModalDesc: 'As mesmas conversas, cr\u00e9ditos de IA e agentes humanos, por menos.',
+    compareCurrent: 'Atual',
+    compareRecommended: 'Recomendado',
+    switchBtnPrefix: 'Mudar para este plano, economize ',
+    noAddConvo: 'Sem conversas adicionais',
+    noAddAi: 'Sem cr\u00e9ditos de IA adicionais',
+    noAddAgents: 'Sem agentes humanos adicionais',
+    infoAmountHeader: 'Quantidade',
+    infoPriceHeader: 'Pre\u00e7o',
+    everyPlanIncludes: 'Todos os planos incluem',
+    drawerTitle: 'Taxas de repasse da Meta',
+    addMarketBtn: '+ Adicionar mercado',
+    metaSubtotalLabel: 'Subtotal da Meta: ',
+    convsAbbrev: 'convs',
+    infoConvoTitle: 'Conversas Adicionais',
+    infoAiTitle: 'Cr\u00e9ditos de IA Adicionais',
+    infoAiDesc: '1 Cr\u00e9dito de IA = 1 conversa otimizada com IA.',
+    infoAgentsTitle: 'Agentes Humanos Adicionais',
+    infoAgentsDesc: 'Cada assento de agente humano adicional custa $50/m\u00eas fixo.',
+    agentSingular: 'agente',
+    agentPlural: 'agentes',
+    staticIncludes: [
+      'Agentes de IA ilimitados', 'Todos os recursos da Treble', 'Onboarding ilimitado',
+      'Gerente de conta dedicado', 'Infraestrutura de n\u00edvel empresarial',
+      'Integra\u00e7\u00e3o com Salesforce', 'Integra\u00e7\u00e3o com Hubspot', 'Integra\u00e7\u00e3o com Google Sheets'
+    ]
+  }
+};
+
+/** Looks up a translation key in the active language, falling back to
+ *  English if a key is ever missing from a locale. */
+function t(key){
+  return I18N[state.lang][key] ?? I18N.en[key];
+}
+
+/** "{n} included in {tier}" needs a different past-participle ending in
+ *  Spanish/Portuguese depending on the grammatical gender of the unit
+ *  noun (conversations is feminine, credits/agents are masculine). */
+function includedInLine(n, tierLabel, gender){
+  const templates = {
+    en: `${fmtInt(n)} included in ${tierLabel}`,
+    es: gender === 'f' ? `${fmtInt(n)} incluidas en ${tierLabel}` : `${fmtInt(n)} incluidos en ${tierLabel}`,
+    pt: gender === 'f' ? `${fmtInt(n)} inclu\u00eddas em ${tierLabel}` : `${fmtInt(n)} inclu\u00eddos em ${tierLabel}`
+  };
+  return templates[state.lang];
+}
+
+/** Tier-card / sticky-bar label for a tier, e.g. "T1 tier" in English but
+ *  "Plan T1" in Spanish and "Plano T1" in Portuguese. */
+function tierLine(label){
+  const templates = { en: `${label} tier`, es: `Plan ${label}`, pt: `Plano ${label}` };
+  return templates[state.lang];
+}
+
+function agentUnitLabel(n){
+  return n === 1 ? t('agentSingular') : t('agentPlural');
+}
+
+/** Writes every static (non-calculated) piece of copy in the page for the
+ *  current language. Called once on load and again whenever the language
+ *  switcher is used. */
+function applyStaticTranslations(){
+  document.documentElement.lang = state.lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === state.lang));
+
+  $('stepTitleSelect').textContent = t('stepSelectPlan');
+  $('stepTitleCustomize').textContent = t('stepCustomizePlan');
+  $('customizeEmpty').textContent = t('customizeEmptyText');
+
+  $('lhTitleConvo').textContent = t('lineConvoTitle');
+  $('lhTitleConvoSlider').textContent = t('lineConvoTitle');
+  $('lhTitleAi').textContent = t('lineAiTitle');
+  $('lhTitleAiSlider').textContent = t('lineAiTitle');
+  $('lhTitleAgents').textContent = t('lineAgentsTitle');
+  $('lhTitleAgentsSlider').textContent = t('lineAgentsTitle') + t('perAgentEachSuffix');
+
+  $('stickyConvoLabel').textContent = t('lineConvoTitle');
+  $('stickyAiLabel').textContent = t('lineAiTitle');
+  $('stickyAgentsLabel').textContent = t('lineAgentsTitle');
+  $('totalLabel').textContent = t('totalLabel');
+  $('metaNoteLabel').textContent = t('metaFeesLabel');
+
+  $('infoAmountHeader').textContent = t('infoAmountHeader');
+  $('infoPriceHeader').textContent = t('infoPriceHeader');
+
+  $('recommendModalTitle').textContent = t('recommendModalTitle');
+  $('recommendModalDesc').textContent = t('recommendModalDesc');
+  $('compareCurrentLabel').textContent = t('compareCurrent');
+  $('compareRecommendedLabel').textContent = t('compareRecommended');
+  $('switchBtnText').textContent = t('switchBtnPrefix');
+
+  $('drawerTitle').textContent = t('drawerTitle');
+  $('addMarketBtn').textContent = t('addMarketBtn');
+  $('metaSubtotalLabel').textContent = t('metaSubtotalLabel');
+}
+
+function renderEveryPlanNote(){
+  $('everyPlanNote').innerHTML = `
+    <span class="ep-title">${t('everyPlanIncludes')}</span>
+    ${t('staticIncludes').map(f => `<span class="ep-item">${f}</span>`).join('')}
+  `;
+}
+
+/** Switches the active language: re-renders every piece of translated
+ *  copy and every dynamically-generated block without touching the
+ *  numbers already chosen (tier, sliders, meta rows all stay put). */
+function setLang(lang){
+  state.lang = lang;
+  applyStaticTranslations();
+  renderEveryPlanNote();
+  renderTierCards();
+  updateAll();
+}
+
+/* ============================================================================
+   STEP 1: TIER CARDS
+   ============================================================================ */
+function renderTierCards(){
+  const wrap = $('tierCards');
+  const isCollapsed = wrap.classList.contains('has-selection');
+  wrap.innerHTML = TIERS.map(tier => {
+    const isActive = tier.id === state.selectedTierId;
+    const clickAction = isActive && isCollapsed ? 'toggleTierExpand()' : `selectTier('${tier.id}')`;
+    const chevron = isActive && isCollapsed
+      ? `<i data-lucide="chevron-down" class="tier-chev"></i>`
+      : '';
+    return `
+    <div class="tier-card ${isActive ? 'active' : ''}" onclick="${clickAction}">
+      <div class="t-left">
+        <span class="t-name">${tier.label}</span>
+        <span class="t-includes">${fmtInt(tier.convos)} ${t('unitConvos')} &middot; ${fmtInt(tier.aiCredits)} ${t('unitAi')} &middot; ${fmtInt(tier.agents)} ${t('unitAgents')}</span>
+      </div>
+      <span class="t-right"><span class="t-price">${fmtMoney(tier.price)}<span class="per">${t('perMonth')}</span></span>${chevron}</span>
+    </div>
+  `;
+  }).join('');
+  if(window.lucide) lucide.createIcons();
+}
+
+function toggleTierExpand(){
+  $('tierCards').classList.toggle('expanded');
+}
+
+function selectTier(id){
+  state.selectedTierId = id;
+  $('tierCards').classList.add('has-selection');
+  $('tierCards').classList.remove('expanded');
+  renderTierCards();
+  $('customizeEmpty').classList.add('hide');
+  $('customizeWrap').classList.add('show');
+  updateAll();
+}
+
+/* ============================================================================
+   LINE-ITEM EXPAND -- each add-on expands independently; closed by default.
+   Clicking anywhere outside the open one closes it (animated via the
+   max-height transition already defined on .line-expand).
+   ============================================================================ */
+const LINE_KEYS = ['convo', 'ai', 'agents'];
+
+function toggleLine(key){
+  const item = $('lineitem-' + key);
+  const wasOpen = item.classList.contains('open');
+  LINE_KEYS.forEach(k => $('lineitem-' + k).classList.remove('open'));
+  if(!wasOpen) item.classList.add('open');
+}
+
+document.addEventListener('click', (e) => {
+  const openItem = LINE_KEYS.map(k => $('lineitem-' + k)).find(el => el.classList.contains('open'));
+  if(openItem && !openItem.contains(e.target)){
+    openItem.classList.remove('open');
+  }
+});
+
+/* ============================================================================
+   STEP 2: CUSTOMIZE
+   ============================================================================ */
+
+/** Cheapest combination of Conversation Buckets (any quantity of each) covering at least `gap` conversations. Unbounded-coin DP in units of 1,000 (every bucket size is a multiple of 1,000). Returns { cost, counts: {size: qty} }. */
+function cheapestConvoBuckets(gap){
+  const counts = {};
+  CONVO_BUCKETS.forEach(b => counts[b.size] = 0);
+  if(gap <= 0) return { cost: 0, counts };
+
+  const unit = 1000;
+  const gapUnits = Math.ceil(gap / unit);
+  const coins = CONVO_BUCKETS.map(b => ({ units: b.size / unit, price: b.price, size: b.size }));
+
+  const minCost = new Array(gapUnits + 1).fill(Infinity);
+  const choice = new Array(gapUnits + 1).fill(null);
+  minCost[0] = 0;
+  for(let i = 1; i <= gapUnits; i++){
+    coins.forEach(c => {
+      const prevIdx = Math.max(0, i - c.units);
+      const cost = minCost[prevIdx] + c.price;
+      if(cost < minCost[i]){ minCost[i] = cost; choice[i] = c; }
+    });
+  }
+
+  let i = gapUnits;
+  while(i > 0){
+    const c = choice[i];
+    counts[c.size] = (counts[c.size] || 0) + 1;
+    i = Math.max(0, i - c.units);
+  }
+  return { cost: minCost[gapUnits], counts };
+}
+
+/** Paints the filled portion of a range input and sets its value. Reads
+ *  `max` off the element itself so the fill percentage can never drift out
+ *  of sync with the slider's own HTML attribute. */
+function syncSliderFill(sliderEl, value){
+  sliderEl.value = value;
+  const pct = (value / Number(sliderEl.max)) * 100;
+  sliderEl.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+}
+
+function syncConvoSliderUI(){
+  syncSliderFill($('convoSlider'), state.convoAdded);
+  $('convoSliderVal').textContent = fmtInt(state.convoAdded);
+}
+
+function onConvoSliderInput(){
+  state.convoAdded = parseInt($('convoSlider').value, 10);
+  syncConvoSliderUI();
+  updateAll();
+}
+
+function syncAgentsSliderUI(){
+  syncSliderFill($('agentsSlider'), state.agentsQty);
+  $('agentsSliderVal').textContent = state.agentsQty;
+}
+
+function onAgentsSliderInput(){
+  state.agentsQty = parseInt($('agentsSlider').value, 10);
+  syncAgentsSliderUI();
+  updateAll();
+}
+
+function syncAiSliderUI(){
+  syncSliderFill($('aiSlider'), state.aiIdx);
+  $('aiSliderVal').textContent = fmtInt(AI_STEPS[state.aiIdx]);
+}
+
+function onAiSliderInput(){
+  state.aiIdx = parseInt($('aiSlider').value, 10);
+  syncAiSliderUI();
+  updateAll();
+}
+
+/* ============================================================================
+   RUNNING TOTAL -- each collapsed line shows its own contribution; the
+   sticky bar at the bottom of the screen always shows the sum.
+   ============================================================================ */
+/** Fills in the sticky total bar's per-line prices and grand total. Shared
+ *  by the "no tier selected" default state and the normal calculated state
+ *  so the same six fields are never written in two different places. */
+function renderStickyTotals(tierLabel, tierPrice, convoCost, aiCost, agentCost, total){
+  $('stickyTierLabel').textContent = tierLabel;
+  $('stickyTierPrice').textContent = fmtMoney(tierPrice);
+  $('stickyConvoPrice').textContent = fmtMoney(convoCost);
+  $('stickyAiPrice').textContent = fmtMoney(aiCost);
+  $('stickyAgentsPrice').textContent = fmtMoney(agentCost);
+  $('totalOut').textContent = fmtMoney(total) + t('perMonth');
+  $('metaNoteAmt').textContent = fmtMoney(state.metaCost);
+}
+
+/** Updates one add-on line item's "+N unit / +$price" display and its
+ *  has-value highlight. `key` matches the DOM id suffix used for that line
+ *  (Convo / Ai / Agents), so this single function covers all three rows. */
+function setLineItemDisplay(key, addedAmount, unitLabel, cost){
+  $('add' + key + 'Qty').textContent = addedAmount > 0 ? '+' + fmtInt(addedAmount) + ' ' + unitLabel : t('noneAdded');
+  $('add' + key + 'Price').textContent = addedAmount > 0 ? '+' + fmtMoney(cost) : '';
+  $('lineitem-' + key.toLowerCase()).classList.toggle('has-value', addedAmount > 0);
+}
+
+function updateAll(){
+  if(!state.selectedTierId){
+    // No tier chosen yet -- keep the total box visible with every line defaulting to $0.
+    $('recoAlert').classList.remove('show');
+    $('stickySummary').innerHTML = `<span>${t('selectTierToStart')}</span>`;
+    renderStickyTotals(t('tierDefaultLabel'), 0, 0, 0, 0, 0);
+    return;
+  }
+  const tier = TIERS.find(tr => tr.id === state.selectedTierId);
+
+  const convoResult = cheapestConvoBuckets(state.convoAdded);
+  const convoCost = convoResult.cost;
+  const aiAdded = AI_STEPS[state.aiIdx];
+  const aiCost = AI_PRICE[aiAdded] || 0;
+  const agentCost = state.agentsQty * AGENT_PRICE;
+  const total = tier.price + convoCost + aiCost + agentCost;
+
+  const totalConvos = tier.convos + state.convoAdded;
+  const totalAi = tier.aiCredits + aiAdded;
+  const totalAgents = tier.agents + state.agentsQty;
+  $('stickySummary').innerHTML =
+    `<span><b>${fmtInt(totalConvos)}</b> ${t('unitConvos')}</span>` +
+    `<span><b>${fmtInt(totalAi)}</b> ${t('unitAi')}</span>` +
+    `<span><b>${fmtInt(totalAgents)}</b> ${t('unitAgents')}</span>`;
+
+  $('convoBaseline').textContent = includedInLine(tier.convos, tier.label, 'f');
+  $('aiBaseline').textContent = includedInLine(tier.aiCredits, tier.label, 'm');
+  $('agentsBaseline').textContent = includedInLine(tier.agents, tier.label, 'm');
+
+  setLineItemDisplay('Convo', state.convoAdded, t('unitConvos'), convoCost);
+  setLineItemDisplay('Ai', aiAdded, t('unitAi'), aiCost);
+  setLineItemDisplay('Agents', state.agentsQty, t('unitAgents'), agentCost);
+
+  renderStickyTotals(tierLine(tier.label), tier.price, convoCost, aiCost, agentCost, total);
+
+  /* ---- cross-tier check: is there a cheaper way to reach the same totals? ---- */
+  const recommended = findCheapest(totalConvos, totalAi, totalAgents);
+  const savings = total - recommended.totalCost;
+  const alertEl = $('recoAlert');
+  if(recommended.tier.id !== tier.id && savings >= 1){
+    state.pendingRecommendation = { recommended, current: { tier, convoCost, aiAdded, aiCost, agentsQty: state.agentsQty, agentCost, total, totalConvos, totalAi, totalAgents } };
+    $('recoAlertText').innerHTML = t('recoPrefix') + '<b>' + fmtMoney(savings) + '</b>' + t('perMonth');
+    alertEl.classList.add('show');
+  } else {
+    state.pendingRecommendation = null;
+    alertEl.classList.remove('show');
+  }
+}
+
+/* ============================================================================
+   CROSS-TIER RECOMMENDATION -- checks whether a different tier could reach
+   the same totals (conversations, AI credits, human agents) for less.
+   ============================================================================ */
+function cheapestAiStepIdx(gap){
+  if(gap <= 0) return 0;
+  for(let i = 0; i < AI_STEPS.length; i++){ if(AI_STEPS[i] >= gap) return i; }
+  return AI_STEPS.length - 1;
+}
+
+function costForTier(tier, totalConvos, totalAi, totalAgents){
+  const convoGap = Math.max(0, totalConvos - tier.convos);
+  const convoResult = cheapestConvoBuckets(convoGap);
+  const aiGap = Math.max(0, totalAi - tier.aiCredits);
+  const aiIdxC = cheapestAiStepIdx(aiGap);
+  const aiCostC = AI_PRICE[AI_STEPS[aiIdxC]] || 0;
+  const agentGap = Math.max(0, totalAgents - tier.agents);
+  const agentCostC = agentGap * AGENT_PRICE;
+  return {
+    tier, convoGap, convoResult, aiIdxC, aiCostC, agentGap, agentCostC,
+    totalCost: tier.price + convoResult.cost + aiCostC + agentCostC
+  };
+}
+
+function findCheapest(totalConvos, totalAi, totalAgents){
+  let best = null;
+  TIERS.forEach(tr => {
+    const c = costForTier(tr, totalConvos, totalAi, totalAgents);
+    if(!best || c.totalCost < best.totalCost) best = c;
+  });
+  return best;
+}
+
+function openRecommendModal(){
+  if(!state.pendingRecommendation) return;
+  const { current, recommended } = state.pendingRecommendation;
+
+  $('cmpCurrentTier').innerHTML = tierLine(current.tier.label) + ' \u00b7 ' + fmtMoney(current.tier.price);
+  $('cmpCurrentConvo').textContent = current.convoCost > 0 ? t('lineConvoTitle') + ': ' + fmtMoney(current.convoCost) : t('noAddConvo');
+  $('cmpCurrentAi').textContent = current.aiCost > 0 ? t('lineAiTitle') + ': ' + fmtMoney(current.aiCost) : t('noAddAi');
+  $('cmpCurrentAgents').textContent = current.agentCost > 0 ? t('lineAgentsTitle') + ': ' + fmtMoney(current.agentCost) : t('noAddAgents');
+  $('cmpCurrentTotal').textContent = fmtMoney(current.total) + t('perMonth');
+
+  $('cmpNewTier').innerHTML = tierLine(recommended.tier.label) + ' \u00b7 ' + fmtMoney(recommended.tier.price);
+  $('cmpNewConvo').textContent = recommended.convoResult.cost > 0 ? t('lineConvoTitle') + ': ' + fmtMoney(recommended.convoResult.cost) : t('noAddConvo');
+  $('cmpNewAi').textContent = recommended.aiCostC > 0 ? t('lineAiTitle') + ': ' + fmtMoney(recommended.aiCostC) : t('noAddAi');
+  $('cmpNewAgents').textContent = recommended.agentCostC > 0 ? t('lineAgentsTitle') + ': ' + fmtMoney(recommended.agentCostC) : t('noAddAgents');
+  $('cmpNewTotal').textContent = fmtMoney(recommended.totalCost) + t('perMonth');
+
+  $('switchSavings').textContent = fmtMoney(current.total - recommended.totalCost);
+
+  $('recommendBackdrop').classList.add('open');
+}
+
+function closeRecommendModal(){
+  $('recommendBackdrop').classList.remove('open');
+}
+
+function applyRecommendation(){
+  if(!state.pendingRecommendation) return;
+  const { recommended } = state.pendingRecommendation;
+
+  state.selectedTierId = recommended.tier.id;
+  state.convoAdded = recommended.convoGap;
+  state.aiIdx = recommended.aiIdxC;
+  state.agentsQty = recommended.agentGap;
+
+  $('tierCards').classList.add('has-selection');
+  $('tierCards').classList.remove('expanded');
+  renderTierCards();
+  syncConvoSliderUI();
+  syncAiSliderUI();
+  syncAgentsSliderUI();
+  closeRecommendModal();
+  updateAll();
+}
+
+/* ============================================================================
+   INFO MODAL -- explains each addition, with a pricing table that
+   highlights whatever is currently selected (showing x-quantity where
+   more than one of the same bucket size was picked).
+   ============================================================================ */
+const INFO_CONTENT = {
+  convo: {
+    title(){ return t('infoConvoTitle'); },
+    description(){ return ''; },
+    buildRows(){
+      const result = cheapestConvoBuckets(state.convoAdded);
+      return CONVO_BUCKETS.map(b => {
+        const qty = result.counts[b.size] || 0;
+        return {
+          label: fmtInt(b.size) + ' ' + t('unitConvos') + (qty > 1 ? ' (\u00d7' + qty + ')' : ''),
+          price: fmtMoney(b.price),
+          selected: qty > 0
+        };
+      });
+    }
+  },
+  ai: {
+    title(){ return t('infoAiTitle'); },
+    description(){ return t('infoAiDesc'); },
+    buildRows(){
+      const current = AI_STEPS[state.aiIdx];
+      return AI_STEPS.filter(v => v > 0).map(v => ({
+        label: fmtInt(v) + ' ' + t('unitAi'),
+        price: fmtMoney(AI_PRICE[v]),
+        selected: v === current
+      }));
+    }
+  },
+  agents: {
+    title(){ return t('infoAgentsTitle'); },
+    description(){ return t('infoAgentsDesc'); },
+    buildRows(){
+      const refs = [0, 10, 25, 50, 75, 100];
+      const points = refs.includes(state.agentsQty) ? refs : [...refs, state.agentsQty].sort((a, b) => a - b);
+      return points.map(n => ({
+        label: n + ' ' + agentUnitLabel(n),
+        price: fmtMoney(n * AGENT_PRICE),
+        selected: n === state.agentsQty
+      }));
+    }
+  }
+};
+
+function openInfoModal(key){
+  const info = INFO_CONTENT[key];
+  const rows = info.buildRows();
+  $('infoModalTitle').textContent = info.title();
+  $('infoModalDesc').textContent = info.description();
+  $('infoModalTableBody').innerHTML = rows.map(r => `
+    <tr class="${r.selected ? 'row-selected' : ''}">
+      <td>${r.label}</td>
+      <td>${r.price}</td>
+    </tr>
+  `).join('');
+  $('infoModalBackdrop').classList.add('open');
+}
+
+function closeInfoModal(){
+  $('infoModalBackdrop').classList.remove('open');
+}
+
+/* ============================================================================
+   META PASS-THROUGH FEES -- real per-message rates by market + category.
+   ============================================================================ */
+const DEMO_RATES = {"Argentina": {"Marketing": 0.0618, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Brazil": {"Marketing": 0.0625, "Utility": 0.0068, "Authentication": 0.0068, "Authentication-International": null, "Service": null}, "Chile": {"Marketing": 0.0889, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Colombia": {"Marketing": 0.0125, "Utility": 0.0008, "Authentication": 0.0008, "Authentication-International": null, "Service": null}, "Egypt": {"Marketing": 0.0644, "Utility": 0.0036, "Authentication": 0.0036, "Authentication-International": 0.065, "Service": null}, "France": {"Marketing": 0.0859, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Germany": {"Marketing": 0.1365, "Utility": 0.055, "Authentication": 0.055, "Authentication-International": null, "Service": null}, "Hong Kong": {"Marketing": 0.0732, "Utility": 0.026, "Authentication": 0.026, "Authentication-International": null, "Service": null}, "Hungary": {"Marketing": 0.086, "Utility": 0.035, "Authentication": 0.035, "Authentication-International": null, "Service": null}, "India": {"Marketing": 0.0118, "Utility": 0.0014, "Authentication": 0.0014, "Authentication-International": 0.0304, "Service": null}, "Indonesia": {"Marketing": 0.0411, "Utility": 0.025, "Authentication": 0.025, "Authentication-International": 0.136, "Service": null}, "Israel": {"Marketing": 0.0353, "Utility": 0.0053, "Authentication": 0.0053, "Authentication-International": null, "Service": null}, "Italy": {"Marketing": 0.0795, "Utility": 0.03, "Authentication": 0.03, "Authentication-International": null, "Service": null}, "Malaysia": {"Marketing": 0.086, "Utility": 0.014, "Authentication": 0.014, "Authentication-International": 0.0418, "Service": null}, "Mexico": {"Marketing": 0.0305, "Utility": 0.0085, "Authentication": 0.0085, "Authentication-International": null, "Service": null}, "Netherlands": {"Marketing": 0.1597, "Utility": 0.05, "Authentication": 0.05, "Authentication-International": null, "Service": null}, "Nigeria": {"Marketing": 0.0516, "Utility": 0.0067, "Authentication": 0.0067, "Authentication-International": 0.075, "Service": null}, "Pakistan": {"Marketing": 0.0473, "Utility": 0.01, "Authentication": 0.01, "Authentication-International": 0.075, "Service": null}, "Peru": {"Marketing": 0.0703, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Poland": {"Marketing": 0.0366, "Utility": 0.0122, "Authentication": 0.0122, "Authentication-International": null, "Service": null}, "Qatar": {"Marketing": 0.0341, "Utility": 0.012, "Authentication": 0.012, "Authentication-International": null, "Service": null}, "Romania": {"Marketing": 0.086, "Utility": 0.029, "Authentication": 0.029, "Authentication-International": null, "Service": null}, "Russia": {"Marketing": 0.0802, "Utility": 0.04, "Authentication": 0.04, "Authentication-International": null, "Service": null}, "Saudi Arabia": {"Marketing": 0.0501, "Utility": 0.0107, "Authentication": 0.0107, "Authentication-International": 0.0598, "Service": null}, "Singapore": {"Marketing": 0.0732, "Utility": 0.016, "Authentication": 0.016, "Authentication-International": null, "Service": null}, "South Africa": {"Marketing": 0.0379, "Utility": 0.0076, "Authentication": 0.0076, "Authentication-International": 0.02, "Service": null}, "Spain": {"Marketing": 0.0707, "Utility": 0.02, "Authentication": 0.02, "Authentication-International": null, "Service": null}, "Turkey": {"Marketing": 0.0109, "Utility": 0.0009, "Authentication": 0.0009, "Authentication-International": null, "Service": null}, "United Arab Emirates": {"Marketing": 0.0499, "Utility": 0.0157, "Authentication": 0.0157, "Authentication-International": 0.051, "Service": null}, "United Kingdom": {"Marketing": 0.0635, "Utility": 0.022, "Authentication": 0.022, "Authentication-International": null, "Service": null}, "North America": {"Marketing": 0.025, "Utility": 0.0034, "Authentication": 0.0034, "Authentication-International": null, "Service": null}, "Rest of Africa": {"Marketing": 0.0225, "Utility": 0.004, "Authentication": 0.004, "Authentication-International": null, "Service": null}, "Rest of Asia Pacific": {"Marketing": 0.0732, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Central & Eastern Europe": {"Marketing": 0.086, "Utility": 0.0212, "Authentication": 0.0212, "Authentication-International": null, "Service": null}, "Rest of Latin America": {"Marketing": 0.074, "Utility": 0.0113, "Authentication": 0.0113, "Authentication-International": null, "Service": null}, "Rest of Middle East": {"Marketing": 0.0341, "Utility": 0.0091, "Authentication": 0.0091, "Authentication-International": null, "Service": null}, "Rest of Western Europe": {"Marketing": 0.0592, "Utility": 0.0171, "Authentication": 0.0171, "Authentication-International": null, "Service": null}, "Other": {"Marketing": 0.0604, "Utility": 0.0077, "Authentication": 0.0077, "Authentication-International": null, "Service": null}};
+const DEMO_COUNTRIES = Object.keys(DEMO_RATES);
+const fmtMoney2 = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function countryOptions(selected){
+  return DEMO_COUNTRIES.map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+function categoryOptions(country, selected){
+  const entry = DEMO_RATES[country] || {};
+  const cats = ['Marketing', 'Utility', 'Authentication'];
+  if(entry['Authentication-International'] != null) cats.push('Authentication-International');
+  cats.push('Service');
+  const current = cats.includes(selected) ? selected : cats[0];
+  return cats.map(c => `<option value="${c}"${c === current ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+function rateFor(country, category){
+  if(category === 'Service') return 0;
+  const entry = DEMO_RATES[country];
+  if(!entry) return 0;
+  const v = entry[category];
+  return v == null ? 0 : v;
+}
+
+function rowTemplate(rowId, country){
+  return `
+    <div class="meta-row" data-row-id="${rowId}">
+      <select class="country-select" onchange="onCountryChange(this)">${countryOptions(country)}</select>
+      <select class="category-select" onchange="onMetaChange()">${categoryOptions(country, 'Marketing')}</select>
+      <div class="row-slider-wrap">
+        <input type="range" class="conv-slider" min="0" max="100000" step="100" value="0" oninput="onMetaChange()">
+        <span class="row-value">0 ${t('convsAbbrev')}</span>
+      </div>
+      <span class="row-price">$0.00</span>
+      <button class="row-remove" onclick="removeRow(this)"><i data-lucide="x"></i></button>
+    </div>`;
+}
+
+function addRow(){
+  state.rowCounter++;
+  const country = DEMO_COUNTRIES[(state.rowCounter - 1) % DEMO_COUNTRIES.length];
+  $('metaRows').insertAdjacentHTML('beforeend', rowTemplate(state.rowCounter, country));
+  if(window.lucide) lucide.createIcons();
+  onMetaChange();
+}
+
+function removeRow(btn){
+  btn.closest('.meta-row').remove();
+  onMetaChange();
+}
+
+function onCountryChange(selectEl){
+  const row = selectEl.closest('.meta-row');
+  const catSelect = row.querySelector('.category-select');
+  const currentCat = catSelect.value;
+  catSelect.innerHTML = categoryOptions(selectEl.value, currentCat);
+  onMetaChange();
+}
+
+function onMetaChange(){
+  let cost = 0;
+  document.querySelectorAll('#metaRows .meta-row').forEach(row => {
+    const country = row.querySelector('.country-select').value;
+    const category = row.querySelector('.category-select').value;
+    const slider = row.querySelector('.conv-slider');
+    const val = parseInt(slider.value, 10);
+    const rate = rateFor(country, category);
+    const rowCost = val * rate;
+    row.querySelector('.row-value').textContent = fmtInt(val) + ' ' + t('convsAbbrev');
+    row.querySelector('.row-price').textContent = '$' + fmtMoney2(rowCost);
+    cost += rowCost;
+  });
+  state.metaCost = cost;
+  $('metaFeeOut').textContent = '$' + fmtMoney2(state.metaCost);
+  $('metaFeeTabOut').textContent = fmtMoney2(state.metaCost);
+  updateAll();
+}
+
+function toggleDrawer(){
+  const drawer = $('metaDrawer');
+  const open = drawer.classList.toggle('open');
+  $('backdrop').classList.toggle('open', open);
+}
+
+/* ============================================================================
+   INIT
+   ============================================================================ */
+applyStaticTranslations();
+renderEveryPlanNote();
+renderTierCards();
+syncConvoSliderUI();
+syncAiSliderUI();
+syncAgentsSliderUI();
+updateAll();
+if(window.lucide) lucide.createIcons(); // static icons: info buttons, line chevrons, modal closes, drawer arrow
+</script>
+
+</body>
+</html>
